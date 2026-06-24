@@ -1,0 +1,72 @@
+/* ============================================================
+   PCI Design System — global entry point.
+   Import order matters: fonts → tokens → base.
+   ============================================================ */
+
+/* Webfonts — IBM Plex Sans / Mono / Serif */
+@import url("https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Serif:wght@400;500;600&display=swap");
+
+@import url("./tokens/colors.css");
+@import url("./tokens/typography.css");
+@import url("./tokens/spacing.css");
+@import url("./tokens/elevation.css");
+@import url("./tokens/motion.css");
+@import url("./tokens/base.css");
+
+/* App-level resets layered on top of base.css */
+html,
+body,
+#root {
+  height: 100%;
+}
+#root {
+  min-height: 100vh;
+}
+
+/* Native scrollbars tuned for the cool-neutral chrome */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--slate-300) transparent;
+}
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+*::-webkit-scrollbar-thumb {
+  background: var(--slate-300);
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background: var(--slate-400);
+  background-clip: padding-box;
+}
+
+button {
+  font-family: var(--font-sans);
+}
+
+/* Print: only the report page surface should print (hide app chrome). */
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  body {
+    background: #fff;
+  }
+  body * {
+    visibility: hidden;
+  }
+  .report-print-root,
+  .report-print-root * {
+    visibility: visible;
+  }
+  .report-print-root {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    box-shadow: none !important;
+  }
+}

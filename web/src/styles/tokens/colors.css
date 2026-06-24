@@ -1,0 +1,132 @@
+/* ============================================================
+   PCI — Color tokens
+   Base ramps + semantic aliases.
+   Brand: deep navy + action blue + AI teal, on cool neutrals.
+   ============================================================ */
+
+:root {
+  /* ---- Brand: Navy (primary, authority, chrome) ---- */
+  --navy-900: #061a38;
+  --navy-800: #0b2e5f; /* PRIMARY brand navy */
+  --navy-700: #103a73;
+  --navy-600: #16498c;
+  --navy-500: #1f5aa6;
+  --navy-300: #8aa6cc;
+  --navy-100: #dbe6f5;
+  --navy-50:  #eef3fb;
+
+  /* ---- Brand: Action blue (CTAs, links, active) ---- */
+  --blue-700: #143fae;
+  --blue-600: #1b4fd8; /* PRIMARY action blue */
+  --blue-500: #3a6bf0;
+  --blue-300: #9cb6f7;
+  --blue-100: #e4ecfe;
+  --blue-50:  #f1f5ff;
+
+  /* ---- Brand: AI teal (algorithm, scoring, success energy) ---- */
+  --teal-700: #0a7d68;
+  --teal-600: #14a085;
+  --teal-500: #1cc3a0;
+  --teal-400: #2ecc9a; /* signature AI teal */
+  --teal-200: #a8ead9;
+  --teal-100: #d6f6ec;
+  --teal-50:  #ebfbf5;
+
+  /* ---- Viewer / dark chrome (whole-slide imaging surfaces) ---- */
+  --viewer-canvas: #0a0f1e;
+  --viewer-panel:  #16213e;
+  --viewer-line:   #0f3460;
+  --viewer-stage:  #11182e;
+  --viewer-text:   #ccd6f6;
+  --viewer-muted:  #8892b0;
+  --viewer-accent: #2ee6c0;
+
+  /* ---- Neutrals (cool slate) ---- */
+  --slate-900: #111c2e;
+  --slate-800: #1f2d3d;
+  --slate-700: #2c3e50; /* body text */
+  --slate-600: #45566b;
+  --slate-500: #64748b;
+  --slate-400: #94a3b8;
+  --slate-300: #cbd5e1;
+  --slate-200: #e2e8f0;
+  --slate-150: #eaeff5;
+  --slate-100: #f1f5fa;
+  --slate-50:  #f5f7fa; /* page background */
+  --white:     #ffffff;
+
+  /* ---- Semantic status ---- */
+  --green-600: #16a34a;
+  --green-100: #e7f6ec;
+  --amber-600: #d97706;
+  --amber-500: #f59e0b;
+  --amber-100: #fdf2dc;
+  --red-600:   #dc2626;
+  --red-700:   #b91c1c;
+  --red-100:   #fdeaea;
+  --purple-600:#7c3aed;
+  --purple-100:#f0e9fd;
+
+  /* ---- Pathology: p53 control cell lines / expression patterns ---- */
+  --ctrl-oe:   #c0392b; /* OE  — overexpression (mutant) */
+  --ctrl-wt:   #14a085; /* WT  — wild-type (normal) */
+  --ctrl-null: #64748b; /* NULL— complete absence */
+  --ctrl-oe-bg:   #fdecea;
+  --ctrl-wt-bg:   #e3f6f0;
+  --ctrl-null-bg: #eef1f5;
+
+  /* ============================================================
+     SEMANTIC ALIASES — use these in product code
+     ============================================================ */
+
+  /* Surfaces (light) */
+  --surface-page:    var(--slate-50);
+  --surface-card:    var(--white);
+  --surface-sunken:  var(--slate-100);
+  --surface-raised:  var(--white);
+  --surface-hover:   var(--slate-100);
+  --surface-inverse: var(--navy-800);
+
+  /* Surfaces (dark viewer) */
+  --surface-viewer:       var(--viewer-canvas);
+  --surface-viewer-panel: var(--viewer-panel);
+
+  /* Text */
+  --text-primary:    var(--slate-800);
+  --text-secondary:  var(--slate-600);
+  --text-tertiary:   var(--slate-500);
+  --text-disabled:   var(--slate-400);
+  --text-inverse:    var(--white);
+  --text-link:       var(--blue-600);
+  --text-brand:      var(--navy-800);
+  --text-ai:         var(--teal-700);
+
+  /* Borders / lines */
+  --border-strong:  var(--slate-300);
+  --border-default: var(--slate-200);
+  --border-subtle:  var(--slate-150);
+  --border-focus:   var(--blue-600);
+
+  /* Interactive (action blue) */
+  --action:          var(--blue-600);
+  --action-hover:    var(--blue-700);
+  --action-soft:     var(--blue-100);
+  --action-soft-fg:  var(--blue-700);
+
+  /* AI / algorithm */
+  --ai:              var(--teal-600);
+  --ai-hover:        var(--teal-700);
+  --ai-soft:         var(--teal-100);
+  --ai-soft-fg:      var(--teal-700);
+
+  /* Status soft pairs (bg / fg) */
+  --status-active-bg:   var(--blue-100);   --status-active-fg:   var(--blue-700);
+  --status-review-bg:   var(--amber-100);  --status-review-fg:   var(--amber-600);
+  --status-done-bg:     var(--green-100);  --status-done-fg:     var(--green-600);
+  --status-ai-bg:       var(--purple-100); --status-ai-fg:       var(--purple-600);
+  --status-critical-bg: var(--red-100);    --status-critical-fg: var(--red-700);
+  --status-neutral-bg:  var(--slate-150);  --status-neutral-fg:  var(--slate-600);
+
+  /* Focus ring */
+  --focus-ring: 0 0 0 3px var(--blue-100);
+}

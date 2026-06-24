@@ -1,0 +1,39 @@
+/* ============================================================
+   PCI — Base element defaults & utilities
+   Light, non-aggressive. Sets the brand baseline on body.
+   ============================================================ */
+
+*, *::before, *::after { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: var(--font-sans);
+  font-size: var(--fs-base);
+  line-height: var(--lh-normal);
+  color: var(--text-primary);
+  background: var(--surface-page);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+h1, h2, h3, h4, h5, h6 { margin: 0; font-weight: var(--fw-semibold); color: var(--text-primary); line-height: var(--lh-snug); }
+p { margin: 0; }
+a { color: var(--text-link); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+code, kbd, samp, .mono { font-family: var(--font-mono); font-size: var(--fs-mono); }
+
+::selection { background: var(--blue-100); color: var(--navy-800); }
+
+/* Eyebrow / uppercase label utility */
+.pci-label {
+  font-size: var(--fs-label);
+  font-weight: var(--fw-semibold);
+  letter-spacing: var(--ls-label);
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+}
+
+/* Mono data utility */
+.pci-mono { font-family: var(--font-mono); font-feature-settings: "tnum" 1; }

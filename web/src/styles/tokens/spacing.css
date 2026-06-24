@@ -1,0 +1,47 @@
+/* ============================================================
+   PCI — Spacing, radii, layout tokens
+   4px base grid.
+   ============================================================ */
+
+:root {
+  /* ---- Spacing scale (4px grid) ---- */
+  --space-0: 0;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+  --space-8: 64px;
+  --space-9: 96px;
+
+  /* ---- Border radii ---- */
+  --radius-xs: 4px;
+  --radius-sm: 6px;   /* buttons, inputs, chips */
+  --radius-md: 8px;   /* cards */
+  --radius-lg: 12px;  /* modals, large panels */
+  --radius-xl: 16px;
+  --radius-pill: 999px;
+
+  /* ---- Border widths ---- */
+  --bw-hairline: 1px;  /* @kind spacing */
+  --bw-thick: 2px;     /* @kind spacing */
+
+  /* ---- Layout ---- */
+  --layout-sidebar: 240px;
+  --layout-sidebar-compact: 200px;
+  --layout-rail: 64px;
+  --layout-topbar: 56px;
+  --layout-content-max: 1200px;
+  --layout-marketing-max: 1180px;
+  --panel-info: 240px;
+  --panel-ai: 280px;
+
+  /* ---- Durations / easing (motion) ---- */
+  --dur-fast: 120ms;  /* @kind other */
+  --dur-base: 180ms;  /* @kind other */
+  --dur-slow: 280ms;  /* @kind other */
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);  /* @kind other */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);    /* @kind other */
+}

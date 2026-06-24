@@ -1,0 +1,46 @@
+/* ============================================================
+   PCI — Typography tokens
+   IBM Plex Sans (UI/body/display) · IBM Plex Mono (data/IDs)
+   IBM Plex Serif (editorial / marketing accents)
+   Loaded via Google Fonts (see @import in styles.css).
+   ============================================================ */
+
+:root {
+  /* ---- Families ---- */
+  --font-sans: "IBM Plex Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", "Cascadia Mono", Menlo, Consolas, monospace;
+  --font-serif: "IBM Plex Serif", Georgia, "Times New Roman", serif;
+
+  /* ---- Weights ---- */
+  --fw-regular: 400;   /* @kind font */
+  --fw-medium: 500;    /* @kind font */
+  --fw-semibold: 600;  /* @kind font */
+  --fw-bold: 700;      /* @kind font */
+
+  /* ---- Type scale (px) ----
+     Tight, data-dense product scale. Marketing display sizes at top. */
+  --fs-display-xl: 56px;  /* hero marketing */
+  --fs-display-lg: 42px;  /* page hero */
+  --fs-display:    32px;  /* section display */
+  --fs-h1: 24px;
+  --fs-h2: 19px;
+  --fs-h3: 16px;
+  --fs-base: 14px;        /* product body */
+  --fs-sm: 13px;
+  --fs-caption: 12px;
+  --fs-label: 11px;       /* uppercase labels */
+  --fs-mono: 13px;        /* data, accession, IDs */
+
+  /* ---- Line heights ---- */
+  --lh-tight: 1.15;    /* @kind font */
+  --lh-snug: 1.3;      /* @kind font */
+  --lh-normal: 1.5;    /* @kind font */
+  --lh-relaxed: 1.65;  /* @kind font */
+
+  /* ---- Letter spacing ---- */
+  --ls-tighter: -0.02em;  /* @kind font */
+  --ls-tight: -0.01em;    /* @kind font */
+  --ls-normal: 0;         /* @kind font */
+  --ls-label: 0.06em;     /* @kind font */
+  --ls-wide: 0.12em;      /* @kind font */
+}

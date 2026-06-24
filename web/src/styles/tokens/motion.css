@@ -1,0 +1,58 @@
+/* ============================================================
+   PCI — Motion tokens, keyframes & utilities
+   Principle: quick, purposeful, no bounce. Ease-out for
+   entrances; standard for in-place moves. Clinical precision.
+   Shipped to consumers via styles.css so motion is shared.
+   ============================================================ */
+
+:root {
+  /* durations (mirrors spacing.css, kept here for the motion closure) */
+  --motion-instant: 90ms;   /* @kind other */
+  --motion-fast: 120ms;     /* @kind other */
+  --motion-base: 180ms;     /* @kind other */
+  --motion-slow: 280ms;     /* @kind other */
+  --motion-reveal: 440ms;   /* @kind other */ /* AI reveal / view change */
+
+  /* easings */
+  --ease-entrance: cubic-bezier(0.16, 1, 0.3, 1);   /* @kind other */ /* decelerate in */
+  --ease-emphasis: cubic-bezier(0.2, 0, 0, 1);      /* @kind other */ /* standard move */
+  --ease-exit: cubic-bezier(0.4, 0, 1, 1);          /* @kind other */ /* accelerate out */
+}
+
+/* ---- Keyframes ---- */
+@keyframes pci-fade-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes pci-fade-in-up { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes pci-fade-in-scale { from { opacity: 0; transform: scale(0.97); } to { opacity: 1; transform: scale(1); } }
+@keyframes pci-spin { to { transform: rotate(360deg); } }
+@keyframes pci-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.45; } }
+@keyframes pci-shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
+@keyframes pci-toast-in { from { opacity: 0; transform: translateY(10px) scale(0.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
+@keyframes pci-scan { 0% { top: 0; } 100% { top: 100%; } }            /* AI analysis sweep */
+@keyframes pci-ring-pulse { 0% { box-shadow: 0 0 0 0 rgba(46,204,154,0.45); } 100% { box-shadow: 0 0 0 12px rgba(46,204,154,0); } }
+
+/* ---- Utility classes ---- */
+.pci-anim-fade { animation: pci-fade-in var(--motion-base) var(--ease-entrance) both; }
+.pci-anim-rise { animation: pci-fade-in-up var(--motion-slow) var(--ease-entrance) both; }
+.pci-anim-pop  { animation: pci-fade-in-scale var(--motion-base) var(--ease-entrance) both; }
+
+/* Skeleton shimmer (use on a gray block while loading) */
+.pci-skeleton {
+  background: linear-gradient(90deg, var(--slate-150) 25%, var(--slate-100) 37%, var(--slate-150) 63%);
+  background-size: 200% 100%;
+  animation: pci-shimmer 1.4s ease-in-out infinite;
+  border-radius: var(--radius-sm);
+}
+
+/* Spinner */
+.pci-spinner {
+  width: 16px; height: 16px; border-radius: 50%;
+  border: 2px solid var(--blue-100); border-top-color: var(--action);
+  animation: pci-spin 0.7s linear infinite;
+}
+
+/* Honor reduced-motion: keep end states, drop the movement */
+@media (prefers-reduced-motion: reduce) {
+  .pci-anim-fade, .pci-anim-rise, .pci-anim-pop { animation-duration: 1ms; }
+  .pci-skeleton { animation: none; }
+  .pci-spinner { animation-duration: 1.4s; }
+}
