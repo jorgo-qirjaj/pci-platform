@@ -212,6 +212,20 @@ export function ScoreDisplay({
         <Row k="Total nuclei" v={total.toLocaleString()} />
         <Row k="AI confidence" v={`${confidence}%`} />
       </div>
+
+      <div
+        style={{
+          marginTop: 12,
+          fontSize: 9,
+          lineHeight: 1.45,
+          color: 'var(--text-tertiary)',
+          borderTop: '1px solid var(--border-subtle)',
+          paddingTop: 8,
+        }}
+      >
+        Investigational (RUO) — p53AI is decision support, not a substitute for pathologist
+        interpretation. Scores are relative to on-slide TriControl™ references.
+      </div>
     </div>
   );
 }

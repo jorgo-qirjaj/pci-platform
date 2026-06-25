@@ -1,9 +1,19 @@
 import { Router } from 'express';
+import rateLimit from 'express-rate-limit';
 import { authenticate, AuthedRequest, issueToken, requireAuth } from '../auth';
 
 export const authRouter = Router();
 
-authRouter.post('/login', (req, res) => {
+// Throttle credential-stuffing / brute force against the login endpoint.
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many login attempts. Please try again later.' },
+});
+
+authRouter.post('/login', loginLimiter, (req, res) => {
   const { email, password } = req.body ?? {};
   if (!email || !password) {
     return res.status(400).json({ error: 'Email and password are required' });

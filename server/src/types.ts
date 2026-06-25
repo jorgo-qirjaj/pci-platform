@@ -67,7 +67,7 @@ export interface Case {
 
 export interface User {
   email: string;
-  password: string; // demo only — never store plaintext in production
+  passwordHash: string; // bcrypt hash — never store plaintext
   name: string;
   role: string;
   initials: string;

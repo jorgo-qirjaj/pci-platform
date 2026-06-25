@@ -1,5 +1,6 @@
 import express from 'express';
 import cors from 'cors';
+import helmet from 'helmet';
 import { authRouter } from './routes/auth';
 import { casesRouter } from './routes/cases';
 import { statsRouter } from './routes/stats';
@@ -9,8 +10,12 @@ import { store } from './store';
 const app = express();
 const PORT = Number(process.env.PORT) || 4000;
 
-app.use(cors());
-app.use(express.json());
+// Restrict cross-origin access to known frontends (comma-separated CORS_ORIGIN, defaults to the dev web origin).
+const allowedOrigins = (process.env.CORS_ORIGIN || 'http://localhost:5173').split(',').map((o) => o.trim());
+
+app.use(helmet());
+app.use(cors({ origin: allowedOrigins }));
+app.use(express.json({ limit: '1mb' }));
 
 app.get('/api/health', (_req, res) => res.json({ ok: true, service: 'pci-platform-api' }));
 

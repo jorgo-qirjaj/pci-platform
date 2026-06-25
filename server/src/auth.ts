@@ -1,10 +1,23 @@
 import jwt from 'jsonwebtoken';
+import bcrypt from 'bcryptjs';
 import { NextFunction, Request, Response } from 'express';
 import { PublicUser, User } from './types';
 import { USERS } from './seed';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'pci-dev-secret-change-me';
+const isProd = process.env.NODE_ENV === 'production';
+// In production a real secret is mandatory; refuse to start without one.
+const JWT_SECRET = process.env.JWT_SECRET || (isProd ? '' : 'pci-dev-secret-change-me');
+if (!JWT_SECRET) {
+  throw new Error('JWT_SECRET environment variable is required in production — refusing to start.');
+}
+if (!process.env.JWT_SECRET) {
+  console.warn('[auth] JWT_SECRET not set — using an insecure development secret. Set JWT_SECRET before deploying.');
+}
 const TOKEN_TTL = '12h';
+
+// A valid bcrypt hash used only to equalize response time when the email is unknown,
+// mitigating user-enumeration via timing. It is not a usable credential.
+const TIMING_EQUALIZER_HASH = '$2b$10$p/CUH1z.emFvzNEz2Y9EDu7deqtrGnnT2HunQh8xEQ9k0LSZoJ5S6';
 
 export function toPublic(u: User): PublicUser {
   return { email: u.email, name: u.name, role: u.role, initials: u.initials };
@@ -12,7 +25,9 @@ export function toPublic(u: User): PublicUser {
 
 export function authenticate(email: string, password: string): User | null {
   const u = USERS.find((x) => x.email.toLowerCase() === email.toLowerCase());
-  if (!u || u.password !== password) return null;
+  // Always run one bcrypt comparison so response time does not reveal whether the email exists.
+  const ok = bcrypt.compareSync(password, u ? u.passwordHash : TIMING_EQUALIZER_HASH);
+  if (!u || !ok) return null;
   return u;
 }
 

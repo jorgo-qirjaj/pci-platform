@@ -3,7 +3,8 @@ import { Case, User } from './types';
 export const USERS: User[] = [
   {
     email: 'jandersen@pcibio.com',
-    password: '123456789',
+    // bcrypt hash of the demo password "123456789"
+    passwordHash: '$2b$10$p/CUH1z.emFvzNEz2Y9EDu7deqtrGnnT2HunQh8xEQ9k0LSZoJ5S6',
     name: 'John Andersen',
     role: 'Pathologist',
     initials: 'JA',

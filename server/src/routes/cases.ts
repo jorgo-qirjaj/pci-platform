@@ -82,17 +82,16 @@ casesRouter.get('/:accession', requireAuth, (req, res) => {
 casesRouter.post('/:accession/score', requireAuth, (req, res) => {
   const c = store.get(req.params.accession);
   if (!c) return res.status(404).json({ error: 'Case not found' });
+  if (c.status === 'complete') {
+    return res.status(409).json({ error: 'Case is finalized and locked; its report is immutable' });
+  }
   if (c.slide.status !== 'ready') {
     return res.status(409).json({ error: 'Slide is still uploading; cannot score yet' });
   }
   const ai = runP53AI(c);
   // Scoring also verifies TriControl™ cell lines are present on the slide.
   const controls = { OE: true, WT: true, NULL: c.biomarker === 'p53' };
-  const updated = store.update(c.accession, {
-    ai,
-    controls,
-    status: c.status === 'complete' ? 'complete' : 'ai-scored',
-  });
+  const updated = store.update(c.accession, { ai, controls, status: 'ai-scored' });
   res.json({ case: updated });
 });
 
@@ -109,7 +108,10 @@ casesRouter.post('/:accession/finalize', requireAuth, (req, res) => {
 casesRouter.get('/:accession/report', requireAuth, (req, res) => {
   const c = store.get(req.params.accession);
   if (!c) return res.status(404).json({ error: 'Case not found' });
-  const ai = c.ai ?? runP53AI(c, false);
+  if (!c.ai) {
+    return res.status(409).json({ error: 'Case has no AI score yet; run p53AI before generating a report' });
+  }
+  const ai = c.ai;
   const metric = metricFor(c.biomarker);
   const scorePhrase = ai.value != null ? `${ai.value}% positive nuclei` : ai.display.toLowerCase();
   const interpretation =
