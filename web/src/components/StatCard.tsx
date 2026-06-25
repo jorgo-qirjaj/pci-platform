@@ -7,6 +7,7 @@ export interface StatCardProps {
   value: string | number;
   icon: string;
   tone: StatTone;
+  onClick?: () => void;
 }
 
 const TONE_FG: Record<StatTone, string> = {
@@ -22,9 +23,10 @@ const TONE_BG: Record<StatTone, string> = {
   done: 'var(--teal-100)',
 };
 
-export function StatCard({ label, value, icon, tone }: StatCardProps) {
+export function StatCard({ label, value, icon, tone, onClick }: StatCardProps) {
   return (
     <div
+      onClick={onClick}
       style={{
         flex: 1,
         background: 'var(--surface-card)',
@@ -32,6 +34,18 @@ export function StatCard({ label, value, icon, tone }: StatCardProps) {
         borderRadius: 'var(--radius-md)',
         padding: 16,
         boxShadow: 'var(--shadow-sm)',
+        cursor: onClick ? 'pointer' : 'default',
+        transition: 'box-shadow var(--dur-base), border-color var(--dur-base), transform var(--dur-base)',
+      }}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.boxShadow = 'var(--shadow-md)';
+        e.currentTarget.style.borderColor = 'var(--border-strong)';
+        e.currentTarget.style.transform = 'translateY(-1px)';
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.boxShadow = 'var(--shadow-sm)';
+        e.currentTarget.style.borderColor = 'var(--border-default)';
+        e.currentTarget.style.transform = 'none';
       }}
     >
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>

@@ -1,13 +1,31 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Button, CaseStatusBadge, ControlChips, Icon, MagBar, ScoreDisplay, Tissue } from '../components/ds';
+import { Button, CaseStatusBadge, ControlChips, Icon, ScoreDisplay } from '../components/ds';
+import { SlideViewer } from '../components/viewer/SlideViewer';
 import { api } from '../lib/api';
 import type { Case } from '../lib/types';
 import { gigabytes, shortDateYear } from '../lib/format';
 
-function InfoRow({ k, v, mono = true }: { k: string; v: ReactNode; mono?: boolean }) {
+function SectionLabel({ children }: { children: ReactNode }) {
   return (
-    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 6, gap: 8 }}>
+    <div
+      style={{
+        fontSize: 10,
+        fontWeight: 600,
+        letterSpacing: '0.06em',
+        textTransform: 'uppercase',
+        color: 'var(--text-tertiary)',
+        marginBottom: 10,
+      }}
+    >
+      {children}
+    </div>
+  );
+}
+
+function InfoRow({ k, v, mono = false }: { k: string; v: ReactNode; mono?: boolean }) {
+  return (
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 7, gap: 8 }}>
       <span style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>{k}</span>
       <span
         style={{
@@ -23,24 +41,8 @@ function InfoRow({ k, v, mono = true }: { k: string; v: ReactNode; mono?: boolea
   );
 }
 
-function InfoSection({ title, children }: { title: string; children: ReactNode }) {
-  return (
-    <div style={{ marginBottom: 18 }}>
-      <div
-        style={{
-          fontSize: 10,
-          fontWeight: 600,
-          letterSpacing: '0.06em',
-          textTransform: 'uppercase',
-          color: 'var(--text-tertiary)',
-          marginBottom: 8,
-        }}
-      >
-        {title}
-      </div>
-      {children}
-    </div>
-  );
+function Divider() {
+  return <div style={{ height: 1, background: 'var(--border-subtle)', margin: '16px 0' }} />;
 }
 
 export function CaseDetail() {
@@ -49,7 +51,9 @@ export function CaseDetail() {
   const [c, setC] = useState<Case | null>(null);
   const [mag, setMag] = useState(20);
   const [aiOn, setAiOn] = useState(true);
+  const [activeTool, setActiveTool] = useState('move');
   const [scoring, setScoring] = useState(false);
+  const [slideId, setSlideId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -58,6 +62,27 @@ export function CaseDetail() {
       .getCase(accession)
       .then((r) => setC(r.case))
       .catch((err) => setError((err as Error).message));
+  }, [accession]);
+
+  // Resolve a real whole-slide image for this case from the tile server.
+  // (Deterministic per-accession pick so a case always maps to the same slide.)
+  useEffect(() => {
+    let active = true;
+    fetch('/slides/')
+      .then((r) => r.json())
+      .then((d: { slides?: string[] }) => {
+        if (!active) return;
+        const list = d.slides ?? [];
+        if (!list.length) return setSlideId(null);
+        const h = [...accession].reduce((sum, ch) => sum + ch.charCodeAt(0), 0);
+        setSlideId(list[h % list.length]);
+      })
+      .catch(() => {
+        if (active) setSlideId(null);
+      });
+    return () => {
+      active = false;
+    };
   }, [accession]);
 
   // Honor the per-biomarker magnification cap.
@@ -104,7 +129,7 @@ export function CaseDetail() {
   }
 
   const scored = c.ai !== null;
-  const roiLabel = c.annotations[0] ? `${c.annotations[0].id} · ${c.annotations[0].microns}µm` : 'ROI-1';
+  const regions = c.annotations.map((a) => ({ id: a.id, area: a.microns }));
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
@@ -169,102 +194,124 @@ export function CaseDetail() {
             background: 'var(--surface-card)',
           }}
         >
-          <InfoSection title="Case">
-            <InfoRow k="Accession" v={c.accession} />
-            <InfoRow k="Biomarker" v={c.biomarker} />
-            <InfoRow k="Site" v={c.site} mono={false} />
-            <InfoRow k="Submitted" v={shortDateYear(c.submitted)} />
-            <InfoRow k="Pathologist" v={c.pathologist} mono={false} />
-          </InfoSection>
-          <InfoSection title="Slide">
-            <InfoRow k="File" v={c.slide.file} />
-            <InfoRow k="Vendor" v={c.slide.vendor} mono={false} />
-            <InfoRow k="Objective" v={c.slide.objective} />
-            <InfoRow k="Dimensions" v={c.slide.dimensions} />
-            <InfoRow k="Size" v={gigabytes(c.slide.sizeBytes)} />
-          </InfoSection>
-          <InfoSection title="p53 TriControl™">
-            <ControlChips controls={c.controls} />
-          </InfoSection>
-          <InfoSection title="Annotations">
-            <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginBottom: 6 }}>
-              {c.annotations.length} region{c.annotations.length === 1 ? '' : 's'} saved
-            </div>
-            {c.annotations.map((a) => (
-              <div key={a.id} style={{ fontSize: 10, color: 'var(--text-tertiary)', fontFamily: 'var(--font-mono)' }}>
-                {a.id} · {a.microns}µm
+          {/* 1) Case */}
+          <SectionLabel>Case</SectionLabel>
+          <InfoRow k="Accession" v={c.accession} mono />
+          <InfoRow k="Biomarker" v={c.biomarker} mono />
+          <InfoRow k="Site" v={c.site} />
+          <InfoRow k="Received" v={shortDateYear(c.received)} />
+          <InfoRow k="Pathologist" v={c.pathologist} />
+
+          <Divider />
+
+          {/* 2) Active slide */}
+          <SectionLabel>Active slide</SectionLabel>
+          <InfoRow k="File" v={c.slide.file} mono />
+          <InfoRow k="Vendor" v={c.slide.vendor} />
+          <InfoRow k="Objective" v={c.slide.objective} />
+          <InfoRow k="Dimensions" v={c.slide.dimensions} mono />
+          <InfoRow k="Size" v={gigabytes(c.slide.sizeBytes)} />
+
+          <Divider />
+
+          {/* 3) p53 TriControl */}
+          <SectionLabel>p53 TriControl™</SectionLabel>
+          <ControlChips controls={c.controls} />
+
+          <Divider />
+
+          {/* 4) Regions */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+            <span
+              style={{
+                fontSize: 10,
+                fontWeight: 600,
+                letterSpacing: '0.06em',
+                textTransform: 'uppercase',
+                color: 'var(--text-tertiary)',
+              }}
+            >
+              Regions
+            </span>
+            <button
+              onClick={() => {}}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 3,
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                color: 'var(--text-link)',
+                fontSize: 11,
+                fontFamily: 'var(--font-sans)',
+                padding: 0,
+              }}
+            >
+              <Icon name="plus" size={13} />
+              Add
+            </button>
+          </div>
+          {c.annotations.length === 0 ? (
+            <div style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>No regions — draw one or click Add</div>
+          ) : (
+            c.annotations.map((a) => (
+              <div
+                key={a.id}
+                style={{
+                  border: '1px solid var(--border-subtle)',
+                  borderRadius: 'var(--radius-sm)',
+                  padding: '9px 10px',
+                  marginBottom: 7,
+                  cursor: 'pointer',
+                  transition: 'border-color var(--dur-fast), background var(--dur-fast)',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.borderColor = 'var(--border-strong)';
+                  e.currentTarget.style.background = 'var(--surface-hover)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.borderColor = 'var(--border-subtle)';
+                  e.currentTarget.style.background = 'transparent';
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <span
+                    style={{ width: 7, height: 7, borderRadius: 2, background: 'var(--ctrl-wt)', flexShrink: 0 }}
+                  />
+                  <span style={{ fontSize: 12, fontWeight: 600, fontFamily: 'var(--font-mono)' }}>{a.id}</span>
+                  <span
+                    style={{
+                      marginLeft: 'auto',
+                      fontSize: 10,
+                      color: 'var(--text-tertiary)',
+                      fontFamily: 'var(--font-mono)',
+                    }}
+                  >
+                    {a.microns} µm
+                  </span>
+                </div>
+                <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 2 }}>Region of interest</div>
+                <div style={{ fontSize: 10, color: 'var(--text-tertiary)' }}>{c.pathologist}</div>
               </div>
-            ))}
-          </InfoSection>
+            ))
+          )}
         </div>
 
-        {/* Viewer */}
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', background: 'var(--viewer-canvas)', minWidth: 0 }}>
-          <MagBar biomarker={c.biomarker} value={mag} onChange={setMag}>
-            <button
-              onClick={() => setAiOn(!aiOn)}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 5,
-                fontSize: 11,
-                padding: '3px 9px',
-                borderRadius: 'var(--radius-xs)',
-                cursor: 'pointer',
-                border: '1px solid var(--viewer-accent)',
-                background: aiOn ? 'rgba(46,230,192,0.15)' : 'transparent',
-                color: 'var(--viewer-accent)',
-                fontFamily: 'var(--font-sans)',
-              }}
-            >
-              <Icon name="sparkles" size={12} />
-              AI overlay
-            </button>
-            <button
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 5,
-                fontSize: 11,
-                padding: '3px 9px',
-                borderRadius: 'var(--radius-xs)',
-                cursor: 'pointer',
-                border: '1px solid var(--viewer-muted)',
-                background: 'transparent',
-                color: 'var(--viewer-muted)',
-                fontFamily: 'var(--font-sans)',
-              }}
-            >
-              <Icon name="pen-line" size={12} />
-              Annotate
-            </button>
-          </MagBar>
-          <div style={{ flex: 1, minHeight: 0 }}>
-            <Tissue
-              showROI
-              showAI={aiOn && scored}
-              scanning={scoring}
-              label={`${roiLabel}${aiOn && scored ? ' · AI scored' : ''}`}
-            />
-          </div>
-          <div
-            style={{
-              display: 'flex',
-              gap: 20,
-              padding: '6px 14px',
-              background: 'var(--viewer-panel)',
-              borderTop: '1px solid var(--viewer-line)',
-              fontSize: 10,
-              color: 'var(--viewer-muted)',
-              fontFamily: 'var(--font-mono)',
-            }}
-          >
-            <span>{c.slide.file}</span>
-            <span>{c.slide.dimensions} px</span>
-            <span>{c.slide.vendor.toLowerCase()}</span>
-            <span>{c.slide.levels} levels</span>
-          </div>
-        </div>
+        {/* Viewer — real OpenSeadragon whole-slide viewer backed by the tile server */}
+        <SlideViewer
+          slideId={slideId}
+          mag={mag}
+          onMagChange={setMag}
+          aiOn={aiOn}
+          onToggleAI={() => setAiOn((v) => !v)}
+          activeTool={activeTool}
+          onToolChange={setActiveTool}
+          biomarker={c.biomarker}
+          regions={regions}
+          isScored={scored && !scoring}
+          counterLabel={c.slide.file}
+        />
 
         {/* AI panel */}
         <div

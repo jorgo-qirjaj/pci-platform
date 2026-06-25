@@ -10,6 +10,16 @@ export function Report() {
   const navigate = useNavigate();
   const [data, setData] = useState<ReportPayload | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [exporting, setExporting] = useState<null | 'print' | 'pdf'>(null);
+
+  const runExport = (kind: 'print' | 'pdf') => {
+    setExporting(kind);
+    // Brief visible feedback before the (blocking) print dialog opens.
+    setTimeout(() => {
+      window.print();
+      setExporting(null);
+    }, 450);
+  };
 
   useEffect(() => {
     api
@@ -77,11 +87,23 @@ export function Report() {
         </button>
         <span style={{ fontSize: 13, color: 'var(--text-tertiary)' }}>Report preview · {c.accession}</span>
         <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
-          <Button variant="secondary" size="sm" iconLeft={<Icon name="printer" size={14} />} onClick={() => window.print()}>
-            Print
+          <Button
+            variant="secondary"
+            size="sm"
+            iconLeft={<Icon name="printer" size={14} />}
+            onClick={() => runExport('print')}
+            disabled={exporting !== null}
+          >
+            {exporting === 'print' ? 'Preparing…' : 'Print'}
           </Button>
-          <Button variant="primary" size="sm" iconLeft={<Icon name="download" size={14} />} onClick={() => window.print()}>
-            Download PDF
+          <Button
+            variant="primary"
+            size="sm"
+            iconLeft={<Icon name="download" size={14} />}
+            onClick={() => runExport('pdf')}
+            disabled={exporting !== null}
+          >
+            {exporting === 'pdf' ? 'Generating…' : 'Download PDF'}
           </Button>
         </div>
       </div>

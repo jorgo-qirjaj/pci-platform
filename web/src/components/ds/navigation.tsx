@@ -1,4 +1,5 @@
 import { Fragment, type CSSProperties, type ReactNode } from 'react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Icon } from './Icon';
 
 /* ============================================================
@@ -18,15 +19,25 @@ export interface SidebarNavProps {
   active?: string;
   onSelect?: (id: string) => void;
   footer?: ReactNode;
+  collapsed?: boolean;
+  onToggleCollapse?: () => void;
   style?: CSSProperties;
 }
 
-export function SidebarNav({ items = [], active, onSelect, footer = null, style = {} }: SidebarNavProps) {
+export function SidebarNav({
+  items = [],
+  active,
+  onSelect,
+  footer = null,
+  collapsed = false,
+  onToggleCollapse,
+  style = {},
+}: SidebarNavProps) {
   let lastSection: string | null = null;
   return (
     <nav
       style={{
-        width: 'var(--layout-sidebar)',
+        width: collapsed ? 'var(--layout-rail)' : 'var(--layout-sidebar)',
         background: 'var(--navy-800)',
         color: '#fff',
         display: 'flex',
@@ -35,12 +46,51 @@ export function SidebarNav({ items = [], active, onSelect, footer = null, style 
         flexShrink: 0,
         height: '100%',
         boxSizing: 'border-box',
+        transition: 'width var(--dur-base)',
         ...style,
       }}
     >
+      {onToggleCollapse && (
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: collapsed ? 'center' : 'flex-end',
+            padding: '0 8px 8px',
+          }}
+        >
+          <button
+            onClick={onToggleCollapse}
+            title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: 30,
+              height: 30,
+              borderRadius: 'var(--radius-sm)',
+              border: 'none',
+              cursor: 'pointer',
+              background: 'transparent',
+              color: 'rgba(255,255,255,0.45)',
+              transition: 'background var(--dur-fast), color var(--dur-fast)',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = 'rgba(255,255,255,0.06)';
+              e.currentTarget.style.color = 'rgba(255,255,255,0.85)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'transparent';
+              e.currentTarget.style.color = 'rgba(255,255,255,0.45)';
+            }}
+          >
+            {collapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
+          </button>
+        </div>
+      )}
       <div style={{ flex: 1, overflowY: 'auto' }}>
         {items.map((it) => {
-          const showSection = it.section && it.section !== lastSection;
+          const showSection = it.section && it.section !== lastSection && !collapsed;
           lastSection = it.section || lastSection;
           const on = it.id === active;
           return (
@@ -61,9 +111,11 @@ export function SidebarNav({ items = [], active, onSelect, footer = null, style 
               )}
               <button
                 onClick={() => onSelect && onSelect(it.id)}
+                title={collapsed ? it.label : undefined}
                 style={{
                   display: 'flex',
                   alignItems: 'center',
+                  justifyContent: collapsed ? 'center' : 'flex-start',
                   gap: 11,
                   width: 'calc(100% - 16px)',
                   margin: '1px 8px',
@@ -87,8 +139,8 @@ export function SidebarNav({ items = [], active, onSelect, footer = null, style 
                 }}
               >
                 {it.icon && <Icon name={it.icon} size={17} style={{ flexShrink: 0 }} />}
-                <span style={{ flex: 1 }}>{it.label}</span>
-                {it.count != null && (
+                {!collapsed && <span style={{ flex: 1 }}>{it.label}</span>}
+                {!collapsed && it.count != null && (
                   <span
                     style={{
                       fontSize: 10,
@@ -107,7 +159,7 @@ export function SidebarNav({ items = [], active, onSelect, footer = null, style 
           );
         })}
       </div>
-      {footer && (
+      {footer && !collapsed && (
         <div style={{ padding: '14px 18px 4px', borderTop: '1px solid rgba(255,255,255,0.08)', marginTop: 8 }}>{footer}</div>
       )}
     </nav>

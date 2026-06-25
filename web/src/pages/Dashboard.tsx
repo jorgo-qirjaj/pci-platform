@@ -86,12 +86,12 @@ export function Dashboard() {
     verticalAlign: 'middle',
   };
 
-  const tiles: { label: string; value: string | number; icon: string; tone: StatTone }[] = stats
+  const tiles: { label: string; value: string | number; icon: string; tone: StatTone; tab: TabKey }[] = stats
     ? [
-        { label: 'Active cases', value: stats.activeCases, icon: 'folder-open', tone: 'action' },
-        { label: 'Pending review', value: stats.pendingReview, icon: 'clock', tone: 'review' },
-        { label: 'AI scored', value: stats.aiScored, icon: 'sparkles', tone: 'ai' },
-        { label: 'Avg turnaround', value: `${stats.avgTurnaroundHours}h`, icon: 'gauge', tone: 'done' },
+        { label: 'Active cases', value: stats.activeCases, icon: 'folder-open', tone: 'action', tab: 'all' },
+        { label: 'Pending review', value: stats.pendingReview, icon: 'clock', tone: 'review', tab: 'review' },
+        { label: 'AI scored', value: stats.aiScored, icon: 'sparkles', tone: 'ai', tab: 'ai' },
+        { label: 'Avg turnaround', value: `${stats.avgTurnaroundHours}h`, icon: 'gauge', tone: 'done', tab: 'all' },
       ]
     : [];
 
@@ -111,7 +111,7 @@ export function Dashboard() {
 
       <div style={{ display: 'flex', gap: 14, marginBottom: 24 }}>
         {tiles.map((s) => (
-          <StatCard key={s.label} {...s} />
+          <StatCard key={s.label} label={s.label} value={s.value} icon={s.icon} tone={s.tone} onClick={() => setTab(s.tab)} />
         ))}
         {!stats &&
           [0, 1, 2, 3].map((i) => (

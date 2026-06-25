@@ -54,15 +54,39 @@ export function TopBar() {
             justifyContent: 'center',
             color: 'var(--text-secondary)',
             cursor: 'pointer',
+            transition: 'background var(--dur-fast), color var(--dur-fast)',
           }}
           title="Notifications"
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background = 'var(--surface-hover)';
+            e.currentTarget.style.color = 'var(--text-primary)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = 'transparent';
+            e.currentTarget.style.color = 'var(--text-secondary)';
+          }}
         >
           <Icon name="bell" size={18} />
         </span>
         <div style={{ position: 'relative' }}>
           <div
-            style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+              cursor: 'pointer',
+              padding: '4px 8px',
+              borderRadius: 'var(--radius-sm)',
+              background: menuOpen ? 'var(--surface-hover)' : 'transparent',
+              transition: 'background var(--dur-fast)',
+            }}
             onClick={() => setMenuOpen((v) => !v)}
+            onMouseEnter={(e) => {
+              if (!menuOpen) e.currentTarget.style.background = 'var(--surface-hover)';
+            }}
+            onMouseLeave={(e) => {
+              if (!menuOpen) e.currentTarget.style.background = 'transparent';
+            }}
           >
             <Avatar name={user?.name || ''} />
             <div style={{ lineHeight: 1.2 }}>
@@ -98,10 +122,25 @@ export function TopBar() {
                     navigate('/settings');
                   }}
                   style={menuItemStyle}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = 'var(--surface-hover)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = 'none';
+                  }}
                 >
                   <Icon name="settings" size={15} /> Settings
                 </button>
-                <button onClick={() => signOut()} style={{ ...menuItemStyle, color: 'var(--red-600)' }}>
+                <button
+                  onClick={() => signOut()}
+                  style={{ ...menuItemStyle, color: 'var(--red-600)' }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = 'var(--red-100)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = 'none';
+                  }}
+                >
                   <Icon name="log-out" size={15} /> Sign out
                 </button>
               </div>

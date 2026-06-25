@@ -9,6 +9,18 @@ export function AppShell() {
   const location = useLocation();
   const navigate = useNavigate();
   const [caseCount, setCaseCount] = useState<number | undefined>(undefined);
+  const [collapsed, setCollapsed] = useState<boolean>(() => {
+    try {
+      return JSON.parse(localStorage.getItem('pci.nav.collapsed') ?? 'false');
+    } catch {
+      return false;
+    }
+  });
+
+  // Persist sidebar collapse preference.
+  useEffect(() => {
+    localStorage.setItem('pci.nav.collapsed', JSON.stringify(collapsed));
+  }, [collapsed]);
 
   // Live badge on the Cases nav item.
   useEffect(() => {
@@ -29,6 +41,8 @@ export function AppShell() {
           active={active}
           onSelect={(id) => navigate(NAV_PATH[id] ?? '/')}
           items={items}
+          collapsed={collapsed}
+          onToggleCollapse={() => setCollapsed((v) => !v)}
           footer={
             <div>
               <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)', marginBottom: 4 }}>AWS S3 · pci-slides</div>
@@ -40,7 +54,9 @@ export function AppShell() {
           }
         />
         <div style={{ flex: 1, overflow: 'hidden', background: 'var(--surface-page)' }}>
-          <Outlet />
+          <div key={location.pathname} className="pci-anim-fade" style={{ height: '100%' }}>
+            <Outlet />
+          </div>
         </div>
       </div>
     </div>

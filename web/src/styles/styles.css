@@ -47,6 +47,18 @@ button {
   font-family: var(--font-sans);
 }
 
+/* Keyboard focus affordance — low specificity so it won't fight component styles. */
+:where(button, [role="button"], a, input, select, [tabindex]):focus-visible {
+  outline: 2px solid var(--border-focus);
+  outline-offset: 2px;
+  border-radius: var(--radius-xs);
+}
+
+/* Smooth, consistent feedback on interactive surfaces. */
+.pci-interactive {
+  transition: background var(--dur-fast), box-shadow var(--dur-fast), border-color var(--dur-fast);
+}
+
 /* Print: only the report page surface should print (hide app chrome). */
 @media print {
   .no-print {

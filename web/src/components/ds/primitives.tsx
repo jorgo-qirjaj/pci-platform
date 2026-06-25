@@ -43,6 +43,13 @@ export function Button({
   };
   const s = sizes[size];
   const v = variants[variant];
+  const hoverBg: Record<ButtonVariant, string> = {
+    primary: 'var(--action-hover)',
+    ai: 'var(--ai-hover)',
+    secondary: 'var(--surface-hover)',
+    ghost: 'var(--surface-hover)',
+    danger: 'var(--red-100)',
+  };
 
   return (
     <button
@@ -63,17 +70,24 @@ export function Button({
         width: full ? '100%' : 'auto',
         whiteSpace: 'nowrap',
         opacity: disabled ? 0.5 : 1,
-        transition: 'filter var(--dur-fast), box-shadow var(--dur-fast)',
+        transition: 'background var(--dur-fast), filter var(--dur-fast), box-shadow var(--dur-fast)',
         ...v,
         ...style,
+      }}
+      onMouseEnter={(e) => {
+        if (disabled) return;
+        e.currentTarget.style.background = hoverBg[variant];
+        e.currentTarget.style.boxShadow = 'var(--shadow-sm)';
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.background = (v.background as string) ?? 'transparent';
+        e.currentTarget.style.boxShadow = 'none';
+        e.currentTarget.style.filter = 'none';
       }}
       onMouseDown={(e) => {
         if (!disabled) e.currentTarget.style.filter = 'brightness(0.94)';
       }}
       onMouseUp={(e) => {
-        e.currentTarget.style.filter = 'none';
-      }}
-      onMouseLeave={(e) => {
         e.currentTarget.style.filter = 'none';
       }}
       {...rest}
