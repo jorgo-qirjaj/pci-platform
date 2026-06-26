@@ -129,7 +129,17 @@ export function CaseDetail() {
   }
 
   const scored = c.ai !== null;
-  const regions = c.annotations.map((a) => ({ id: a.id, area: a.microns }));
+  const regions = c.annotations.map((a) => ({ id: a.id, area: a.microns, rect: a.rect }));
+
+  // Persist a drawn ROI to the case, then refresh from the returned case.
+  const handleAddRegion = async ({ microns, rect }: { microns: number; rect: { x: number; y: number; width: number; height: number } }) => {
+    try {
+      const { case: updated } = await api.addAnnotation(c.accession, { microns, rect });
+      setC(updated);
+    } catch (err) {
+      setError((err as Error).message);
+    }
+  };
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
@@ -234,7 +244,8 @@ export function CaseDetail() {
               Regions
             </span>
             <button
-              onClick={() => {}}
+              onClick={() => setActiveTool('roi')}
+              title="Draw a region of interest on the slide"
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
@@ -311,6 +322,7 @@ export function CaseDetail() {
           regions={regions}
           isScored={scored && !scoring}
           counterLabel={c.slide.file}
+          onAddRegion={handleAddRegion}
         />
 
         {/* AI panel */}

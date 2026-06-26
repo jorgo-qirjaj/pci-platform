@@ -69,12 +69,21 @@ interface SlideInfo {
   dimensions: [number, number];
   level_count: number;
   objective_power?: number | string | null;
+  mpp_x?: number | string | null;
   vendor?: string;
+}
+
+export interface RegionRect {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
 }
 
 export interface SlideRegion {
   id: string;
   area: string | number;
+  rect?: RegionRect;
 }
 
 export interface SlideViewerProps {
@@ -91,6 +100,8 @@ export interface SlideViewerProps {
   biomarker?: Biomarker;
   regions?: SlideRegion[];
   isScored?: boolean;
+  /** Called when the user finishes drawing an ROI (rect in viewport coords). */
+  onAddRegion?: (region: { microns: number; rect: RegionRect }) => void;
 }
 
 export function SlideViewer({
@@ -107,11 +118,24 @@ export function SlideViewer({
   biomarker = 'p53',
   regions = [],
   isScored = false,
+  onAddRegion,
 }: SlideViewerProps) {
   const viewerRef = useRef<HTMLDivElement | null>(null);
   const osdRef = useRef<OpenSeadragon.Viewer | null>(null);
   const [slideInfo, setSlideInfo] = useState<SlideInfo | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  // ROI drawing state. Refs let the (once-created) MouseTracker read current values.
+  const activeToolRef = useRef(activeTool);
+  const onAddRegionRef = useRef(onAddRegion);
+  const drawStartRef = useRef<{ x: number; y: number } | null>(null);
+  const [draftRect, setDraftRect] = useState<{ left: number; top: number; width: number; height: number } | null>(null);
+  useEffect(() => {
+    activeToolRef.current = activeTool;
+  }, [activeTool]);
+  useEffect(() => {
+    onAddRegionRef.current = onAddRegion;
+  }, [onAddRegion]);
 
   // Fetch slide metadata (dimensions, level count) for the tile source.
   useEffect(() => {
@@ -195,13 +219,80 @@ export function SlideViewer({
 
     osdRef.current.open(tileSource);
 
+    // ROI drawing: a MouseTracker captures press/drag/release to draw a rectangle when
+    // the 'roi' tool is active (OSD panning is disabled for that tool, below).
+    const tracker = new OpenSeadragon.MouseTracker({
+      element: osdRef.current.element,
+      pressHandler: (e: any) => {
+        if (activeToolRef.current !== 'roi') return;
+        drawStartRef.current = { x: e.position.x, y: e.position.y };
+        setDraftRect({ left: e.position.x, top: e.position.y, width: 0, height: 0 });
+      },
+      dragHandler: (e: any) => {
+        const s = drawStartRef.current;
+        if (activeToolRef.current !== 'roi' || !s) return;
+        setDraftRect({
+          left: Math.min(s.x, e.position.x),
+          top: Math.min(s.y, e.position.y),
+          width: Math.abs(e.position.x - s.x),
+          height: Math.abs(e.position.y - s.y),
+        });
+      },
+      releaseHandler: (e: any) => {
+        const s = drawStartRef.current;
+        drawStartRef.current = null;
+        setDraftRect(null);
+        const v = osdRef.current;
+        if (activeToolRef.current !== 'roi' || !s || !v) return;
+        const left = Math.min(s.x, e.position.x);
+        const top = Math.min(s.y, e.position.y);
+        const w = Math.abs(e.position.x - s.x);
+        const h = Math.abs(e.position.y - s.y);
+        if (w < 6 || h < 6) return; // ignore stray clicks
+        const p1 = v.viewport.pointFromPixel(new OpenSeadragon.Point(left, top));
+        const p2 = v.viewport.pointFromPixel(new OpenSeadragon.Point(left + w, top + h));
+        const rect = { x: p1.x, y: p1.y, width: p2.x - p1.x, height: p2.y - p1.y };
+        const imgRect = v.viewport.viewportToImageRectangle(new OpenSeadragon.Rect(rect.x, rect.y, rect.width, rect.height));
+        const mpp = parseFloat(String(slideInfo.mpp_x ?? '')) || 0;
+        const sidePx = Math.sqrt(Math.max(1, imgRect.width * imgRect.height));
+        const microns = Math.max(1, Math.round(mpp > 0 ? sidePx * mpp : sidePx));
+        onAddRegionRef.current?.({ microns, rect });
+      },
+    });
+    osdRef.current.setMouseNavEnabled(activeToolRef.current !== 'roi');
+
     return () => {
+      tracker.destroy();
       if (osdRef.current) {
         osdRef.current.destroy();
         osdRef.current = null;
       }
     };
   }, [slideInfo, slideId]);
+
+  // Toggle pan vs. draw when the active tool changes (and after a viewer rebuild).
+  useEffect(() => {
+    osdRef.current?.setMouseNavEnabled(activeTool !== 'roi');
+  }, [activeTool, slideInfo, slideId]);
+
+  // Anchored overlays for drawn regions (those with a rect), synced to the slide.
+  useEffect(() => {
+    const v = osdRef.current;
+    if (!v) return;
+    v.clearOverlays();
+    regions.forEach((r) => {
+      if (!r.rect) return;
+      const el = document.createElement('div');
+      el.style.cssText =
+        'border:2px solid var(--viewer-accent);border-radius:3px;box-shadow:0 0 0 1px rgba(0,0,0,0.35);pointer-events:none';
+      const label = document.createElement('span');
+      label.textContent = `${r.id} · ${r.area} µm`;
+      label.style.cssText =
+        'position:absolute;top:-18px;left:0;font-size:10px;font-family:var(--font-mono);color:var(--viewer-accent);white-space:nowrap;text-shadow:0 1px 2px rgba(0,0,0,0.7)';
+      el.appendChild(label);
+      v.addOverlay({ element: el, location: new OpenSeadragon.Rect(r.rect.x, r.rect.y, r.rect.width, r.rect.height) });
+    });
+  }, [regions, slideInfo, slideId]);
 
   const zoomTo = (targetMag: number) => {
     if (!osdRef.current || !slideInfo) return;
@@ -380,9 +471,27 @@ export function SlideViewer({
 
         <div ref={viewerRef} style={{ position: 'absolute', inset: 0 }} />
 
+        {/* Live ROI rectangle while drawing */}
+        {draftRect && (
+          <div
+            style={{
+              position: 'absolute',
+              left: draftRect.left,
+              top: draftRect.top,
+              width: draftRect.width,
+              height: draftRect.height,
+              border: '2px dashed var(--viewer-accent)',
+              background: 'rgba(46,230,192,0.12)',
+              borderRadius: 3,
+              zIndex: 5,
+              pointerEvents: 'none',
+            }}
+          />
+        )}
+
         {/* ROI overlays */}
         {slideId &&
-          regions.map((r, i) => {
+          regions.filter((r) => !r.rect).map((r, i) => {
             const pos = ROI_POSITIONS[i % ROI_POSITIONS.length];
             const showAIOverlay = i === 0 && aiOn && isScored;
             return (
