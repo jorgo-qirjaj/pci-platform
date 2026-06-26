@@ -1,11 +1,13 @@
 import { useRef, useState } from 'react';
 import { Icon } from './ds';
+import { getToken } from '../lib/api';
 
 const SUPPORTED = ['.svs', '.ndpi', '.mrxs', '.scn', '.tiff', '.tif'];
 
 /**
- * Drag-and-drop slide uploader. Posts to the tile server's /slides/upload
- * (proxied by Vite → S3). Uses XHR for real upload progress (no axios dep).
+ * Drag-and-drop slide uploader. Posts to the platform API's authenticated
+ * /api/slides/upload, which validates the JWT and forwards to the tile server
+ * (→ S3). Uses XHR for real upload progress (no axios dep).
  */
 export function UploadZone({ onUploaded }: { onUploaded?: (name: string) => void }) {
   const [dragging, setDragging] = useState(false);
@@ -39,7 +41,9 @@ export function UploadZone({ onUploaded }: { onUploaded?: (name: string) => void
     form.append('file', file);
 
     const xhr = new XMLHttpRequest();
-    xhr.open('POST', '/slides/upload');
+    xhr.open('POST', '/api/slides/upload');
+    const token = getToken();
+    if (token) xhr.setRequestHeader('Authorization', `Bearer ${token}`);
     xhr.upload.onprogress = (e) => {
       if (e.lengthComputable) setProgress(Math.round((e.loaded * 100) / e.total));
     };
@@ -52,17 +56,19 @@ export function UploadZone({ onUploaded }: { onUploaded?: (name: string) => void
       } else {
         setStatus('error');
         try {
-          setMessage(JSON.parse(xhr.responseText).detail || `Upload failed (${xhr.status})`);
+          // Tile-server rejections come back as { detail }; the API's own as { error }.
+          const body = JSON.parse(xhr.responseText);
+          setMessage(body.detail || body.error || `Upload failed (${xhr.status})`);
         } catch {
           setMessage(`Upload failed (${xhr.status})`);
         }
       }
-      setTimeout(() => setStatus(null), 5000);
+      setTimeout(() => setStatus(null), 6000);
     };
     xhr.onerror = () => {
       setUploading(false);
       setStatus('error');
-      setMessage('Upload failed — could not reach the tile server.');
+      setMessage('Upload failed — could not reach the server.');
       setTimeout(() => setStatus(null), 5000);
     };
     xhr.send(form);

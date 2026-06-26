@@ -158,8 +158,20 @@ export function SlideViewer({
     setSlideInfo(null);
     setError(null);
     fetch(`${API_BASE}/slides/${encodeURIComponent(slideId)}/info`)
-      .then((r) => {
-        if (!r.ok) throw new Error(`Slide info ${r.status}`);
+      .then(async (r) => {
+        if (!r.ok) {
+          let detail = '';
+          try {
+            detail = (await r.json())?.detail || '';
+          } catch {
+            /* non-JSON error body */
+          }
+          if (r.status === 404) throw new Error('Slide not found on the tile server.');
+          if (r.status === 415) {
+            throw new Error(detail || 'This file is not a viewable whole-slide image (needs a pyramidal/tiled WSI).');
+          }
+          throw new Error(detail || `Could not load slide (${r.status}).`);
+        }
         return r.json();
       })
       .then((d: SlideInfo) => {

@@ -4,6 +4,7 @@ import helmet from 'helmet';
 import { authRouter } from './routes/auth';
 import { casesRouter } from './routes/cases';
 import { statsRouter } from './routes/stats';
+import { slidesRouter } from './routes/slides';
 import { requireAuth } from './auth';
 import { store } from './store';
 
@@ -22,6 +23,7 @@ app.get('/api/health', (_req, res) => res.json({ ok: true, service: 'pci-platfor
 app.use('/api/auth', authRouter);
 app.use('/api/cases', casesRouter);
 app.use('/api/stats', statsRouter);
+app.use('/api/slides', slidesRouter);
 
 // Demo convenience: reset the case store back to seed data.
 app.post('/api/admin/reset', requireAuth, (_req, res) => {
