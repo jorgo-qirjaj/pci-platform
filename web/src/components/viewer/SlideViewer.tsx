@@ -168,7 +168,9 @@ export function SlideViewer({
           }
           if (r.status === 404) throw new Error('Slide not found on the tile server.');
           if (r.status === 415) {
-            throw new Error(detail || 'This file is not a viewable whole-slide image (needs a pyramidal/tiled WSI).');
+            // Keep the full technical reason in the console; show a short line in the UI.
+            if (detail) console.warn('[slide] unsupported format:', detail);
+            throw new Error("This file isn't a viewable whole-slide image. It needs to be a pyramidal slide (SVS, NDPI, MRXS, SCN, or tiled TIFF).");
           }
           throw new Error(detail || `Could not load slide (${r.status}).`);
         }
