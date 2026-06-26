@@ -141,6 +141,7 @@ export function SlideViewer({
   const onAddRegionRef = useRef(onAddRegion);
   const drawStartRef = useRef<{ x: number; y: number } | null>(null);
   const pathRef = useRef<{ x: number; y: number }[] | null>(null);
+  const polyPtsRef = useRef<{ x: number; y: number }[] | null>(null);
   const [draftRect, setDraftRect] = useState<{ left: number; top: number; width: number; height: number } | null>(null);
   const [draftPath, setDraftPath] = useState<{ x: number; y: number }[] | null>(null);
   useEffect(() => {
@@ -246,6 +247,25 @@ export function SlideViewer({
       const d = Math.hypot(ib.x - ia.x, ib.y - ia.y);
       return mppx > 0 ? d * mppx : d;
     };
+    const closePolygon = (raw: { x: number; y: number }[]) => {
+      const pts = raw.slice();
+      while (
+        pts.length >= 2 &&
+        Math.hypot(pts[pts.length - 1].x - pts[pts.length - 2].x, pts[pts.length - 1].y - pts[pts.length - 2].y) < 6
+      )
+        pts.pop();
+      polyPtsRef.current = null;
+      setDraftPath(null);
+      if (pts.length < 3) return;
+      const vpPts = pts.map((p) => {
+        const vp = toVp(p.x, p.y);
+        return { x: vp.x, y: vp.y };
+      });
+      let len = 0;
+      for (let i = 1; i < pts.length; i++) len += segUm(pts[i - 1], pts[i]);
+      len += segUm(pts[pts.length - 1], pts[0]);
+      onAddRegionRef.current?.({ type: 'polygon', microns: Math.max(1, Math.round(len)), points: vpPts });
+    };
     const tracker = new OpenSeadragon.MouseTracker({
       element: viewer.element,
       pressHandler: (e: any) => {
@@ -325,6 +345,29 @@ export function SlideViewer({
           onAddRegionRef.current?.({ type: 'rect', microns, rect });
         }
       },
+      clickHandler: (e: any) => {
+        const tool = activeToolRef.current;
+        if (tool === 'poly') {
+          const p = { x: e.position.x, y: e.position.y };
+          const arr = polyPtsRef.current || [];
+          const first = arr[0];
+          if (first && arr.length >= 3 && Math.hypot(p.x - first.x, p.y - first.y) < 12) {
+            closePolygon(arr); // click near the first vertex closes the polygon
+            return;
+          }
+          const last = arr[arr.length - 1];
+          if (!last || Math.hypot(p.x - last.x, p.y - last.y) > 5) arr.push(p);
+          polyPtsRef.current = arr;
+          setDraftPath([...arr]);
+        } else if (tool === 'pin') {
+          const vp = toVp(e.position.x, e.position.y);
+          const note = window.prompt('Add a note for this point:') || '';
+          if (note.trim()) onAddRegionRef.current?.({ type: 'point', microns: 1, points: [{ x: vp.x, y: vp.y }], text: note.trim() });
+        }
+      },
+      dblClickHandler: () => {
+        if (activeToolRef.current === 'poly' && polyPtsRef.current) closePolygon(polyPtsRef.current);
+      },
     });
     osdRef.current.setMouseNavEnabled(activeToolRef.current === 'move');
 
@@ -340,6 +383,10 @@ export function SlideViewer({
   // Toggle pan vs. draw when the active tool changes (and after a viewer rebuild).
   useEffect(() => {
     osdRef.current?.setMouseNavEnabled(activeTool === 'move');
+    if (activeTool !== 'poly') {
+      polyPtsRef.current = null;
+      setDraftPath(null);
+    }
   }, [activeTool, slideInfo, slideId]);
 
   // Anchored overlays for drawn regions, synced to the slide by OpenSeadragon.
@@ -359,6 +406,20 @@ export function SlideViewer({
         label.style.cssText = labelCss;
         el.appendChild(label);
         v.addOverlay({ element: el, location: new OpenSeadragon.Rect(r.rect.x, r.rect.y, r.rect.width, r.rect.height) });
+      } else if (r.type === 'point' && r.points && r.points.length >= 1) {
+        // Pin / comment → a dot marker (+ note) anchored at the point.
+        const el = document.createElement('div');
+        el.style.cssText = 'pointer-events:none;display:flex;align-items:center;gap:4px;white-space:nowrap';
+        const dot = document.createElement('span');
+        dot.style.cssText =
+          'width:12px;height:12px;border-radius:50%;background:var(--viewer-accent);box-shadow:0 0 0 2px rgba(0,0,0,0.45);flex-shrink:0';
+        el.appendChild(dot);
+        const t = document.createElement('span');
+        t.textContent = r.text || r.id;
+        t.style.cssText =
+          'font-size:10px;font-family:var(--font-sans);color:#fff;background:rgba(16,21,35,0.82);padding:1px 5px;border-radius:3px;text-shadow:0 1px 2px rgba(0,0,0,0.7)';
+        el.appendChild(t);
+        v.addOverlay({ element: el, location: new OpenSeadragon.Point(r.points[0].x, r.points[0].y), placement: OpenSeadragon.Placement.CENTER });
       } else if (r.points && r.points.length >= 2) {
         // Line / freehand / polygon → an SVG anchored to the points' bounding box.
         const xs = r.points.map((p) => p.x);

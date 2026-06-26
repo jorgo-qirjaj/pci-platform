@@ -321,7 +321,7 @@ export function CaseDetail() {
                       fontFamily: 'var(--font-mono)',
                     }}
                   >
-                    {a.microns} µm
+                    {a.type === 'point' ? 'pin' : `${a.microns} µm`}
                   </span>
                   <button
                     onClick={(e) => {
@@ -357,7 +357,19 @@ export function CaseDetail() {
                     <Icon name="trash-2" size={13} />
                   </button>
                 </div>
-                <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 2 }}>Region of interest</div>
+                <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 2 }}>
+                  {a.text
+                    ? a.text
+                    : a.type === 'point'
+                      ? 'Pin'
+                      : a.type === 'line'
+                        ? 'Line measurement'
+                        : a.type === 'freehand'
+                          ? 'Freehand'
+                          : a.type === 'polygon'
+                            ? 'Polygon'
+                            : 'Region of interest'}
+                </div>
                 <div style={{ fontSize: 10, color: 'var(--text-tertiary)' }}>{c.pathologist}</div>
               </div>
             ))
