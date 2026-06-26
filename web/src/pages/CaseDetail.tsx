@@ -129,12 +129,25 @@ export function CaseDetail() {
   }
 
   const scored = c.ai !== null;
-  const regions = c.annotations.map((a) => ({ id: a.id, area: a.microns, rect: a.rect }));
+  const regions = c.annotations.map((a) => ({
+    id: a.id,
+    area: a.microns,
+    rect: a.rect,
+    type: a.type,
+    points: a.points,
+    text: a.text,
+  }));
 
-  // Persist a drawn ROI to the case, then refresh from the returned case.
-  const handleAddRegion = async ({ microns, rect }: { microns: number; rect: { x: number; y: number; width: number; height: number } }) => {
+  // Persist a drawn annotation to the case, then refresh from the returned case.
+  const handleAddRegion = async (region: {
+    type: string;
+    microns: number;
+    rect?: { x: number; y: number; width: number; height: number };
+    points?: { x: number; y: number }[];
+    text?: string;
+  }) => {
     try {
-      const { case: updated } = await api.addAnnotation(c.accession, { microns, rect });
+      const { case: updated } = await api.addAnnotation(c.accession, region);
       setC(updated);
     } catch (err) {
       setError((err as Error).message);

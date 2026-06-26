@@ -108,19 +108,29 @@ casesRouter.post('/:accession/finalize', requireAuth, (req, res) => {
 casesRouter.post('/:accession/annotations', requireAuth, (req, res) => {
   const c = store.get(req.params.accession);
   if (!c) return res.status(404).json({ error: 'Case not found' });
-  const { microns, rect } = req.body ?? {};
+  const { microns, rect, type, points, text } = req.body ?? {};
   const micronsNum = Number(microns);
   if (!Number.isFinite(micronsNum) || micronsNum <= 0) {
     return res.status(400).json({ error: 'microns must be a positive number' });
   }
   const validRect =
     rect && typeof rect === 'object' && ['x', 'y', 'width', 'height'].every((k) => Number.isFinite(Number(rect[k])));
+  const validPoints =
+    Array.isArray(points) &&
+    points.length > 0 &&
+    points.every((p) => p && Number.isFinite(Number(p.x)) && Number.isFinite(Number(p.y)));
+  const validType = ['rect', 'line', 'freehand', 'polygon', 'point'].includes(type)
+    ? (type as Annotation['type'])
+    : undefined;
   const annotation: Annotation = {
     id: `ROI-${c.annotations.length + 1}`,
     microns: Math.round(micronsNum),
+    ...(validType ? { type: validType } : {}),
     ...(validRect
       ? { rect: { x: Number(rect.x), y: Number(rect.y), width: Number(rect.width), height: Number(rect.height) } }
       : {}),
+    ...(validPoints ? { points: points.map((p: { x: number; y: number }) => ({ x: Number(p.x), y: Number(p.y) })) } : {}),
+    ...(typeof text === 'string' && text.trim() ? { text: text.trim() } : {}),
   };
   const updated = store.update(c.accession, { annotations: [...c.annotations, annotation] });
   res.status(201).json({ case: updated });

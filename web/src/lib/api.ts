@@ -78,7 +78,13 @@ export const api = {
   },
   async addAnnotation(
     accession: string,
-    body: { microns: number; rect?: { x: number; y: number; width: number; height: number } },
+    body: {
+      microns: number;
+      type?: string;
+      rect?: { x: number; y: number; width: number; height: number };
+      points?: { x: number; y: number }[];
+      text?: string;
+    },
   ): Promise<{ case: Case }> {
     return request(`/cases/${encodeURIComponent(accession)}/annotations`, {
       method: 'POST',

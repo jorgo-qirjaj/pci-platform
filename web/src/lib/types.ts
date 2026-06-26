@@ -29,11 +29,18 @@ export interface SlideMeta {
   status: 'uploading' | 'ready';
 }
 
+export type AnnotationType = 'rect' | 'line' | 'freehand' | 'polygon' | 'point';
+
 export interface Annotation {
   id: string;
   microns: number;
-  /** Region location in OpenSeadragon viewport coordinates (present for drawn ROIs). */
+  type?: AnnotationType;
+  /** Rectangle location in OpenSeadragon viewport coordinates (rect ROIs). */
   rect?: { x: number; y: number; width: number; height: number };
+  /** Path/vertices in viewport coordinates (line / freehand / polygon / point). */
+  points?: { x: number; y: number }[];
+  /** Optional note (pin/comment annotations). */
+  text?: string;
 }
 
 export interface AiScore {
