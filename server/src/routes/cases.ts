@@ -126,6 +126,18 @@ casesRouter.post('/:accession/annotations', requireAuth, (req, res) => {
   res.status(201).json({ case: updated });
 });
 
+// Delete an annotation from a case.
+casesRouter.delete('/:accession/annotations/:annotationId', requireAuth, (req, res) => {
+  const c = store.get(req.params.accession);
+  if (!c) return res.status(404).json({ error: 'Case not found' });
+  const next = c.annotations.filter((a) => a.id !== req.params.annotationId);
+  if (next.length === c.annotations.length) {
+    return res.status(404).json({ error: 'Annotation not found' });
+  }
+  const updated = store.update(c.accession, { annotations: next });
+  res.json({ case: updated });
+});
+
 // Structured report payload, including generated interpretation prose.
 casesRouter.get('/:accession/report', requireAuth, (req, res) => {
   const c = store.get(req.params.accession);

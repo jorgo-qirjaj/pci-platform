@@ -85,4 +85,9 @@ export const api = {
       body: JSON.stringify(body),
     });
   },
+  async deleteAnnotation(accession: string, annotationId: string): Promise<{ case: Case }> {
+    return request(`/cases/${encodeURIComponent(accession)}/annotations/${encodeURIComponent(annotationId)}`, {
+      method: 'DELETE',
+    });
+  },
 };

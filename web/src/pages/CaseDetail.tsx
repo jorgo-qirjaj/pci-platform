@@ -141,6 +141,15 @@ export function CaseDetail() {
     }
   };
 
+  const handleDeleteRegion = async (id: string) => {
+    try {
+      const { case: updated } = await api.deleteAnnotation(c.accession, id);
+      setC(updated);
+    } catch (err) {
+      setError((err as Error).message);
+    }
+  };
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
       {/* Case header */}
@@ -301,6 +310,39 @@ export function CaseDetail() {
                   >
                     {a.microns} µm
                   </span>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDeleteRegion(a.id);
+                    }}
+                    title="Delete region"
+                    aria-label={`Delete ${a.id}`}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      width: 22,
+                      height: 22,
+                      marginLeft: 2,
+                      padding: 0,
+                      border: 'none',
+                      borderRadius: 'var(--radius-xs)',
+                      background: 'transparent',
+                      color: 'var(--text-tertiary)',
+                      cursor: 'pointer',
+                      transition: 'background var(--dur-fast), color var(--dur-fast)',
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = 'var(--red-100)';
+                      e.currentTarget.style.color = 'var(--red-600)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = 'transparent';
+                      e.currentTarget.style.color = 'var(--text-tertiary)';
+                    }}
+                  >
+                    <Icon name="trash-2" size={13} />
+                  </button>
                 </div>
                 <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 2 }}>Region of interest</div>
                 <div style={{ fontSize: 10, color: 'var(--text-tertiary)' }}>{c.pathologist}</div>
