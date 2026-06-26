@@ -16,7 +16,7 @@ Work landed after this plan was first written. Reconciled against the current tr
 | **C1, C2, C3, H1, H4, H7, H10, M3** | ✅ **Fixed** | The six quick wins — shipped in `59615bb`, runtime-verified (Appendix A). |
 | **M6 — Real WSI viewer** (was roadmap) | ✅ **Done early** | The CSS mock (`Tissue.tsx`) is replaced by a real OpenSeadragon viewer backed by a FastAPI/OpenSlide tile server. This was a Milestone-6 roadmap item. |
 | **Annotations / ROI data** | 🟡 **Partial** | Real annotations (rect, freehand, line, polygon, pin) now persist as `Regions`. This supplies the ROI data **H5** needs, but scoring (`ai.ts`) still isn't anchored to a region. |
-| **H12 — Unauthenticated slide upload** ⚠️ | 🆕 **New, open** | The tile server's `POST /slides/upload` accepts uploads with **no auth token** (confirmed: a plain `curl` returned `200` and wrote to S3). Out of scope of the original audit, which only covered the Express app. See Findings. |
+| **H12 — Unauthenticated slide upload** | ✅ **Fixed** | `POST /slides/upload` now requires `X-Upload-Key` (fails closed if unset) and is reached only via the authenticated platform proxy `POST /api/slides/upload`. Verified end-to-end (no JWT → 401; valid slide → 200; bad file → 400). |
 | **Slide de-identification** | ⚠️ **Process gap** | Real-case `.svs` files carry patient names in their embedded `label`/`macro` images (e.g. `6021.svs` → "GREEN, R"). Anything uploaded to S3 must be de-identified including those associated images. |
 
 Everything else below remains **open** as written.
@@ -74,7 +74,7 @@ Legend: ✅ fixed · 🟡 partially addressed · ⬜ open · 🆕 found after th
 - ⬜ **H9 · No tests, no CI, no lint** · Quality/Safety net · repo-wide. **Fix:** Vitest + Supertest on clinical-safety paths first; GitHub Actions typecheck/test gate. **Effort: M–L**
 - ✅ **H10 · CORS fully open** · Security · `index.ts` — `app.use(cors())` allowed all origins. **Fix shipped:** strict origin allowlist (evil origin not echoed — verified). **Effort: S**
 - ⬜ **H11 · HIPAA technical-safeguard gaps** · Compliance · repo-wide — no audit logging, no encryption at rest (plaintext `store.json`), no TLS enforcement. **Fix:** audit trail, encryption, HTTPS-only. **Effort: L**
-- 🆕⬜ **H12 · Unauthenticated slide-upload endpoint (tile server)** · Security · `pci-viewer` FastAPI `POST /slides/upload` — accepts multipart uploads with **no authentication** and writes them to the S3 bucket (confirmed: a plain `curl` with no token returned `200`). **Impact:** anyone who knows the URL can fill the bucket (cost/DoS), poison the viewer with arbitrary files, or ingest un-vetted (possibly PHI-bearing) slides. **Fix:** require an authenticated, authorized token on the upload route; validate file type/size; rate-limit. **Effort: S–M**
+- 🆕✅ **H12 · Unauthenticated slide-upload endpoint (tile server)** · Security · `pci-viewer` FastAPI `POST /slides/upload` — previously accepted multipart uploads with **no authentication** and wrote them to the S3 bucket. **Fixed:** the route now requires `X-Upload-Key == UPLOAD_API_KEY` and fails closed (503) when the key is unset; the browser reaches it only through the authenticated platform proxy `POST /api/slides/upload` (JWT-gated), which adds the key server-side. Uploads are also validated as real WSIs (400 otherwise) and size-capped (413 >2 GB). **Deploy note:** set `UPLOAD_API_KEY` on both the Railway tile server and the platform API. **Effort: S–M**
 
 ### Medium
 
@@ -107,8 +107,7 @@ Legend: ✅ fixed · 🟡 partially addressed · ⬜ open · 🆕 found after th
 - **[C4] Object-level authorization + non-enumerable IDs** · *Effort L*
   - Why: any token can read/score/finalize **any** case and accessions are sequential.
   - Acceptance: every `/cases/:id*` handler checks the case belongs to the caller's lab/tenant; cross-tenant access returns 404 (not 403, to avoid existence leak); resources carry an opaque UUID alongside the human accession; an automated test proves user A cannot read user B's case.
-- **[H12] Authenticate the tile-server upload route** · *Effort S–M* 🆕
-  - Acceptance: `POST /slides/upload` rejects unauthenticated requests; only authorized roles can upload; file type/size validated; rate-limited.
+- ✅ **[H12] Authenticate the tile-server upload route** · *Effort S–M* 🆕 — **Done.** Upload now requires `X-Upload-Key` (fail-closed), is proxied behind JWT auth, validates WSI format, and caps size at 2 GB. Set `UPLOAD_API_KEY` on Railway + the API to activate in prod.
 - **[M2] Lock down the demo reset endpoint** · *Effort S*
   - Acceptance: `/api/admin/reset` is gated behind an admin role **and** disabled unless `NODE_ENV !== 'production'`; non-admin → 403.
 - **[H6] Move JWT out of localStorage** · *Effort M*
