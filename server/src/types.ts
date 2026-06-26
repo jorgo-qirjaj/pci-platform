@@ -33,6 +33,8 @@ export interface SlideMeta {
 export interface Annotation {
   id: string;
   microns: number;
+  /** Region location in OpenSeadragon viewport coordinates (present for drawn ROIs). */
+  rect?: { x: number; y: number; width: number; height: number };
 }
 
 export interface AiScore {

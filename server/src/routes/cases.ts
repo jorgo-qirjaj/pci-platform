@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { AuthedRequest, requireAuth } from '../auth';
 import { store } from '../store';
 import { metricFor, runP53AI } from '../ai';
-import { Biomarker, Case, CaseStatus } from '../types';
+import { Annotation, Biomarker, Case, CaseStatus } from '../types';
 
 export const casesRouter = Router();
 
@@ -102,6 +102,28 @@ casesRouter.post('/:accession/finalize', requireAuth, (req, res) => {
   if (!c.ai) return res.status(409).json({ error: 'Case has no AI score to finalize' });
   const updated = store.update(c.accession, { status: 'complete' as CaseStatus });
   res.json({ case: updated });
+});
+
+// Append an annotation (region of interest) to a case.
+casesRouter.post('/:accession/annotations', requireAuth, (req, res) => {
+  const c = store.get(req.params.accession);
+  if (!c) return res.status(404).json({ error: 'Case not found' });
+  const { microns, rect } = req.body ?? {};
+  const micronsNum = Number(microns);
+  if (!Number.isFinite(micronsNum) || micronsNum <= 0) {
+    return res.status(400).json({ error: 'microns must be a positive number' });
+  }
+  const validRect =
+    rect && typeof rect === 'object' && ['x', 'y', 'width', 'height'].every((k) => Number.isFinite(Number(rect[k])));
+  const annotation: Annotation = {
+    id: `ROI-${c.annotations.length + 1}`,
+    microns: Math.round(micronsNum),
+    ...(validRect
+      ? { rect: { x: Number(rect.x), y: Number(rect.y), width: Number(rect.width), height: Number(rect.height) } }
+      : {}),
+  };
+  const updated = store.update(c.accession, { annotations: [...c.annotations, annotation] });
+  res.status(201).json({ case: updated });
 });
 
 // Structured report payload, including generated interpretation prose.

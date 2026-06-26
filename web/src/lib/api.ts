@@ -76,4 +76,13 @@ export const api = {
   async getReport(accession: string): Promise<{ report: ReportPayload }> {
     return request(`/cases/${encodeURIComponent(accession)}/report`);
   },
+  async addAnnotation(
+    accession: string,
+    body: { microns: number; rect?: { x: number; y: number; width: number; height: number } },
+  ): Promise<{ case: Case }> {
+    return request(`/cases/${encodeURIComponent(accession)}/annotations`, {
+      method: 'POST',
+      body: JSON.stringify(body),
+    });
+  },
 };
