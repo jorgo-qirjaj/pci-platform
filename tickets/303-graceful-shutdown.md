@@ -1,8 +1,8 @@
 # 303 — Graceful shutdown
 
-**Status:** Open · **Maps to:** M11-a · **Band:** Backend/Data · **Effort:** S
+**Status:** Done · **Maps to:** M11-a · **Band:** Backend/Data · **Effort:** S
 
-**Acceptance.**
-- [ ] SIGTERM/SIGINT drains in-flight requests and flushes/closes the store before exit
+**What.** SIGTERM/SIGINT stop accepting connections, drain in-flight requests (`server.close`),
+flush the store, then exit; force-exit after 10s if draining stalls.
 
-**Files.** `server/src/index.ts`, `server/src/store.ts`
+**Files.** `server/src/index.ts`, `server/src/store.ts` (`flush()`)

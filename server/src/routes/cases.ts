@@ -4,10 +4,9 @@ import { AuthedRequest, requireAuth } from '../auth';
 import { store } from '../store';
 import { metricFor, runP53AI } from '../ai';
 import { Annotation, Biomarker, Case, CaseStatus, ControlSet } from '../types';
+import { CreateCaseSchema, ScoreBodySchema, parseBody } from '../validation';
 
 export const casesRouter = Router();
-
-const BIOMARKERS: Biomarker[] = ['p53', 'PDL1', 'HER2', 'MMR'];
 
 /**
  * Fetch a case only if it belongs to the caller's lab. Returns null when the case
@@ -58,10 +57,9 @@ casesRouter.get('/', requireAuth, (req: AuthedRequest, res) => {
 });
 
 casesRouter.post('/', requireAuth, (req: AuthedRequest, res) => {
-  const { biomarker, site, specimen } = req.body ?? {};
-  if (!biomarker || !BIOMARKERS.includes(biomarker)) {
-    return res.status(400).json({ error: `biomarker must be one of ${BIOMARKERS.join(', ')}` });
-  }
+  const body = parseBody(CreateCaseSchema, req.body, res);
+  if (!body) return;
+  const { biomarker, site, specimen } = body;
   const accession = store.nextAccession();
   const today = new Date();
   const submitted = today.toISOString().slice(0, 10);
@@ -117,7 +115,9 @@ casesRouter.post('/:accession/score', requireAuth, (req: AuthedRequest, res) => 
   if (c.annotations.length === 0) {
     return res.status(409).json({ error: 'Draw a region of interest first; a score must be anchored to a region.' });
   }
-  const regionId = typeof req.body?.regionId === 'string' ? req.body.regionId : c.annotations[0].id;
+  const scoreBody = parseBody(ScoreBodySchema, req.body ?? {}, res);
+  if (!scoreBody) return;
+  const regionId = scoreBody.regionId ?? c.annotations[0].id;
   if (!c.annotations.some((a) => a.id === regionId)) {
     return res.status(404).json({ error: `Region ${regionId} not found on this case` });
   }

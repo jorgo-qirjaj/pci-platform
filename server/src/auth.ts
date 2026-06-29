@@ -3,6 +3,7 @@ import bcrypt from 'bcryptjs';
 import { NextFunction, Request, Response } from 'express';
 import { PublicUser, User } from './types';
 import { USERS } from './seed';
+import { TokenPayloadSchema } from './validation';
 
 const isProd = process.env.NODE_ENV === 'production';
 // In production a real secret is mandatory; refuse to start without one.
@@ -46,14 +47,14 @@ export function requireAuth(req: AuthedRequest, res: Response, next: NextFunctio
     return res.status(401).json({ error: 'Missing bearer token' });
   }
   try {
-    const payload = jwt.verify(token, JWT_SECRET) as PublicUser & { iat: number; exp: number };
-    req.user = {
-      email: payload.email,
-      name: payload.name,
-      role: payload.role,
-      initials: payload.initials,
-      labId: payload.labId,
-    };
+    // Verify the signature, THEN validate the payload shape (M8) — never trust a blind cast.
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const parsed = TokenPayloadSchema.safeParse(decoded);
+    if (!parsed.success) {
+      return res.status(401).json({ error: 'Invalid token payload' });
+    }
+    const { email, name, role, initials, labId } = parsed.data;
+    req.user = { email, name, role, initials, labId };
     next();
   } catch {
     return res.status(401).json({ error: 'Invalid or expired token' });

@@ -81,17 +81,17 @@ Legend: ✅ fixed · 🟡 partially addressed · ⬜ open · 🆕 found after th
 
 ### Medium
 
-- ⬜ **M1 · No request validation / unbounded inputs** · `cases.ts` — body fields stored unchecked. **Fix:** `zod` schemas + length limits. *(Annotation routes added some validation; coverage is still incomplete.)* **Effort: S–M**
-- ⬜ **M2 · Destructive reset open to any user** · `index.ts` — `/api/admin/reset` wipes data with only auth, no role. **Fix:** restrict to admin/dev env. **Effort: S**
+- ✅ **M1 · No request validation / unbounded inputs** · `cases.ts` — **Fix shipped:** `zod` schemas validate login, case-create, and score bodies (length-bounded; invalid → 400 with field issues). Annotation route retains its existing field validation (full zod migration is a follow-up). Tested. **Effort: S–M**
+- ✅ **M2 · Destructive reset open to any user** · `index.ts` — **Fix shipped:** `/api/admin/reset` is disabled in production (403) and still auth-gated elsewhere. Tested. **Effort: S**
 - ✅ **M3 · No security headers** · `index.ts` — **Fix shipped:** `helmet` added (`X-Content-Type-Options`, `X-Frame-Options`, `X-Powered-By` removed — verified). **Effort: S**
 - ⬜ **M4 · Duplicated domain types** · `server/src/types.ts` vs `web/src/lib/types.ts` — drift risk. **Fix:** shared package. **Effort: M**
 - ⬜ **M5 · Stale client data, no caching/pagination** · `Dashboard.tsx` fetches all and filters client-side; scoring doesn't invalidate the list. **Fix:** React Query + server pagination. **Effort: M**
 - ⬜ **M6 · Accessibility gaps** · clickable `<tr onClick>` with no keyboard/role (`Dashboard.tsx`); `NewCaseModal` lacks focus trap/Esc/`role="dialog"`; `TopBar` account menu is a non-semantic toggled div. *(Interactivity pass added hover/focus states; structural a11y still open.)* **Effort: M**
 - ⬜ **M7 · "CLIA pending · clinical use" labeling** · Regulatory · `cases.ts` — labels an investigational-AI report "clinical use" while CLIA is pending. **Fix:** legal/labeling review. **Effort: S**
-- ⬜ **M8 · `jwt.verify` cast without shape validation** · `auth.ts`. **Fix:** validate payload. **Effort: S**
+- ✅ **M8 · `jwt.verify` cast without shape validation** · `auth.ts` — **Fix shipped:** `requireAuth` validates the decoded payload against a zod schema and rejects malformed tokens (401). Tested. **Effort: S**
 - ⬜ **M9 · Unmemoized tissue gradients** · Perf · `Tissue.tsx` — ~200 gradient strings rebuilt per render. *(Now largely superseded by the real OSD viewer; applies only where `Tissue.tsx` still renders.)* **Effort: S**
 - ⬜ **M10 · In-memory store blocks horizontal scaling** · Scalability · `store.ts`. **Fix:** DB. **Effort: L**
-- ⬜ **M11 · Thin observability, no graceful shutdown** · `index.ts`, `store.ts` — console logging only; SIGTERM mid-write risks corruption. **Effort: M**
+- 🟡 **M11 · Thin observability, no graceful shutdown** · `index.ts`, `store.ts` — **Progress:** graceful shutdown shipped (SIGTERM/SIGINT drain + flush; M11-a). **Still open:** structured logging, error tracking, metrics/health probes (M11-b). **Effort: M**
 
 **Done well (balance):** de-identified model holds (no patient names anywhere in the app data); generic login error avoids user enumeration; JWT expiry set; `encodeURIComponent` on client paths; strict TS; persistence has a safe seed fallback; clear routes/store/ai separation.
 

@@ -70,6 +70,11 @@ class Store {
     this.persist();
   }
 
+  /** Force a synchronous persist — used on graceful shutdown. */
+  flush() {
+    this.persist();
+  }
+
   list(): Case[] {
     return clone(this.cases);
   }

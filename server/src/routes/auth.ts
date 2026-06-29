@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import rateLimit from 'express-rate-limit';
 import { authenticate, AuthedRequest, issueToken, requireAuth } from '../auth';
+import { LoginSchema, parseBody } from '../validation';
 
 export const authRouter = Router();
 
@@ -14,11 +15,9 @@ const loginLimiter = rateLimit({
 });
 
 authRouter.post('/login', loginLimiter, (req, res) => {
-  const { email, password } = req.body ?? {};
-  if (!email || !password) {
-    return res.status(400).json({ error: 'Email and password are required' });
-  }
-  const user = authenticate(String(email), String(password));
+  const body = parseBody(LoginSchema, req.body, res);
+  if (!body) return;
+  const user = authenticate(body.email, body.password);
   if (!user) {
     return res.status(401).json({ error: 'Invalid email or password' });
   }

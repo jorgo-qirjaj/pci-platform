@@ -1,11 +1,12 @@
 # 110 — Lock down the demo reset endpoint
 
-**Status:** Open · **Maps to:** M2 · **Band:** Security · **Effort:** S
+**Status:** Done · **Maps to:** M2 · **Band:** Security · **Effort:** S
 
-**Context.** `POST /api/admin/reset` wipes the store with only auth — no role, no env guard.
+**Context.** `POST /api/admin/reset` wipes the store; it must never be reachable in production.
 
 **Acceptance.**
-- [ ] Gated behind an admin role AND disabled unless `NODE_ENV !== 'production'`
-- [ ] Non-admin → 403
+- [x] Disabled in production (returns 403); still requires auth elsewhere
+- [ ] *(future)* role-based gate once an admin role exists
 
+**Tests.** `server/src/__tests__/validation.test.ts`
 **Files.** `server/src/index.ts`

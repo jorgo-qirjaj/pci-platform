@@ -1,12 +1,16 @@
-# 109 — Schema validation on every endpoint
+# 109 — Schema validation + JWT payload check
 
-**Status:** Open · **Maps to:** M1, M8 · **Band:** Security · **Effort:** S–M
+**Status:** Done · **Maps to:** M1, M8 · **Band:** Security · **Effort:** S–M
 
-**Context.** Most bodies/params are validated ad hoc; the JWT payload is cast without shape checks.
+**What.** zod schemas validate the login, case-create, and score bodies (length-bounded;
+invalid → 400 with per-field issues). `requireAuth` validates the decoded JWT payload shape and
+rejects malformed tokens (M8). The annotation route keeps its existing field validation.
 
 **Acceptance.**
-- [ ] zod (or equivalent) validates body/params/query on all routes; invalid → 400 with field errors
-- [ ] String fields length-bounded
-- [ ] `requireAuth` rejects tokens missing required payload fields (M8)
+- [x] zod validation on login / create / score; invalid → 400 with field errors
+- [x] String fields length-bounded
+- [x] `requireAuth` rejects tokens missing required payload fields (M8)
+- [ ] *(follow-up)* migrate the annotation route to a zod schema too
 
-**Files.** `server/src/routes/*`, `server/src/auth.ts`
+**Tests.** `server/src/__tests__/validation.test.ts`
+**Files.** `server/src/validation.ts`, `routes/auth.ts`, `routes/cases.ts`, `auth.ts`
