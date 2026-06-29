@@ -8,7 +8,7 @@ import { slidesRouter } from './routes/slides';
 import { requireAuth } from './auth';
 import { store } from './store';
 
-const app = express();
+export const app = express();
 const PORT = Number(process.env.PORT) || 4000;
 
 // Restrict cross-origin access to known frontends (comma-separated CORS_ORIGIN, defaults to the dev web origin).
@@ -34,6 +34,10 @@ app.post('/api/admin/reset', requireAuth, (_req, res) => {
 // 404 for unknown API routes.
 app.use('/api', (_req, res) => res.status(404).json({ error: 'Not found' }));
 
-app.listen(PORT, () => {
-  console.log(`[pci-api] listening on http://localhost:${PORT}`);
-});
+// Start the HTTP listener only when run as the server. Under test the app is
+// imported into Supertest, which drives it without binding a port.
+if (process.env.NODE_ENV !== 'test') {
+  app.listen(PORT, () => {
+    console.log(`[pci-api] listening on http://localhost:${PORT}`);
+  });
+}

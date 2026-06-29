@@ -13,6 +13,7 @@
     "dev:web": "npm --workspace web run dev",
     "build": "npm --workspace server run build && npm --workspace web run build",
     "typecheck": "npm --workspace server run typecheck && npm --workspace web run typecheck",
+    "test": "npm --workspace server run test",
     "start": "npm --workspace server run start"
   },
   "devDependencies": {

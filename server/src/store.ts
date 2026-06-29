@@ -4,8 +4,10 @@ import { randomUUID } from 'crypto';
 import { Case } from './types';
 import { SEED_CASES, PRIMARY_LAB_ID } from './seed';
 
-const DATA_DIR = path.join(__dirname, '..', 'data');
-const STORE_FILE = path.join(DATA_DIR, 'store.json');
+// Persisted store location. Overridable via PCI_STORE_FILE so tests (and any
+// alternate deployment) can point at a throwaway path instead of the real data.
+const STORE_FILE = process.env.PCI_STORE_FILE || path.join(__dirname, '..', 'data', 'store.json');
+const DATA_DIR = path.dirname(STORE_FILE);
 
 interface StoreShape {
   cases: Case[];
