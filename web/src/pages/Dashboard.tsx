@@ -168,9 +168,19 @@ export function Dashboard() {
               <tr
                 key={c.accession}
                 onClick={() => navigate(`/cases/${c.accession}`)}
+                tabIndex={0}
+                aria-label={`View case ${c.accession}, ${c.biomarker}, status ${c.status}`}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    navigate(`/cases/${c.accession}`);
+                  }
+                }}
                 style={{ cursor: 'pointer' }}
                 onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--surface-hover)')}
                 onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+                onFocus={(e) => (e.currentTarget.style.background = 'var(--surface-hover)')}
+                onBlur={(e) => (e.currentTarget.style.background = 'transparent')}
               >
                 <td style={{ ...td, fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--action)', fontWeight: 600 }}>
                   {c.accession}

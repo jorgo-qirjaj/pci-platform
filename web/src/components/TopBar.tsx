@@ -1,4 +1,4 @@
-import { useState, type CSSProperties, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type CSSProperties, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Avatar, Icon, SearchField } from './ds';
 import { useAuth } from '../lib/auth';
@@ -8,6 +8,20 @@ export function TopBar() {
   const navigate = useNavigate();
   const [q, setQ] = useState('');
   const [menuOpen, setMenuOpen] = useState(false);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+
+  // Close the account menu on Escape and return focus to its trigger.
+  useEffect(() => {
+    if (!menuOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setMenuOpen(false);
+        triggerRef.current?.focus();
+      }
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [menuOpen]);
 
   const submitSearch = (e: FormEvent) => {
     e.preventDefault();
@@ -69,13 +83,20 @@ export function TopBar() {
           <Icon name="bell" size={18} />
         </span>
         <div style={{ position: 'relative' }}>
-          <div
+          <button
+            ref={triggerRef}
+            type="button"
+            aria-haspopup="menu"
+            aria-expanded={menuOpen}
+            aria-label="Account menu"
             style={{
               display: 'flex',
               alignItems: 'center',
               gap: 8,
               cursor: 'pointer',
               padding: '4px 8px',
+              border: 'none',
+              fontFamily: 'inherit',
               borderRadius: 'var(--radius-sm)',
               background: menuOpen ? 'var(--surface-hover)' : 'transparent',
               transition: 'background var(--dur-fast)',
@@ -89,16 +110,18 @@ export function TopBar() {
             }}
           >
             <Avatar name={user?.name || ''} />
-            <div style={{ lineHeight: 1.2 }}>
+            <div style={{ lineHeight: 1.2, textAlign: 'left' }}>
               <div style={{ fontSize: 13, fontWeight: 600 }}>{user?.name}</div>
               <div style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>{user?.role}</div>
             </div>
             <Icon name="chevron-down" size={14} style={{ color: 'var(--text-tertiary)' }} />
-          </div>
+          </button>
           {menuOpen && (
             <>
               <div style={{ position: 'fixed', inset: 0, zIndex: 10 }} onClick={() => setMenuOpen(false)} />
               <div
+                role="menu"
+                aria-label="Account options"
                 style={{
                   position: 'absolute',
                   right: 0,
@@ -117,6 +140,7 @@ export function TopBar() {
                   <div style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>{user?.email}</div>
                 </div>
                 <button
+                  role="menuitem"
                   onClick={() => {
                     setMenuOpen(false);
                     navigate('/settings');
@@ -132,6 +156,7 @@ export function TopBar() {
                   <Icon name="settings" size={15} /> Settings
                 </button>
                 <button
+                  role="menuitem"
                   onClick={() => signOut()}
                   style={{ ...menuItemStyle, color: 'var(--red-600)' }}
                   onMouseEnter={(e) => {

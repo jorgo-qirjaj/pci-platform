@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Button, Icon, Input, Select } from './ds';
 import { api } from '../lib/api';
 import type { Case } from '../lib/types';
@@ -11,6 +11,44 @@ export function NewCaseModal({ onClose, onCreated }: { onClose: () => void; onCr
   const [specimen, setSpecimen] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
+
+  // Accessibility: focus the dialog on open, trap Tab within it, Escape to close,
+  // and restore focus to whatever was focused before when it closes.
+  useEffect(() => {
+    const previouslyFocused = document.activeElement as HTMLElement | null;
+    const focusable = () =>
+      Array.from(
+        dialogRef.current?.querySelectorAll<HTMLElement>(
+          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
+        ) ?? [],
+      ).filter((el) => !el.hasAttribute('disabled'));
+    focusable()[0]?.focus();
+
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        onClose();
+      } else if (e.key === 'Tab') {
+        const f = focusable();
+        if (f.length === 0) return;
+        const first = f[0];
+        const last = f[f.length - 1];
+        if (e.shiftKey && document.activeElement === first) {
+          e.preventDefault();
+          last.focus();
+        } else if (!e.shiftKey && document.activeElement === last) {
+          e.preventDefault();
+          first.focus();
+        }
+      }
+    };
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('keydown', onKey);
+      previouslyFocused?.focus?.();
+    };
+  }, [onClose]);
 
   const create = async () => {
     setBusy(true);
@@ -39,6 +77,10 @@ export function NewCaseModal({ onClose, onCreated }: { onClose: () => void; onCr
       onClick={onClose}
     >
       <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="newcase-title"
         onClick={(e) => e.stopPropagation()}
         className="pci-anim-pop"
         style={{
@@ -51,10 +93,15 @@ export function NewCaseModal({ onClose, onCreated }: { onClose: () => void; onCr
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
-          <h2 style={{ fontSize: 19, fontWeight: 600 }}>New case</h2>
-          <span style={{ cursor: 'pointer', color: 'var(--text-tertiary)' }} onClick={onClose}>
+          <h2 id="newcase-title" style={{ fontSize: 19, fontWeight: 600 }}>New case</h2>
+          <button
+            type="button"
+            aria-label="Close dialog"
+            onClick={onClose}
+            style={{ cursor: 'pointer', color: 'var(--text-tertiary)', background: 'none', border: 'none', padding: 4, display: 'inline-flex' }}
+          >
             <Icon name="x" size={18} />
-          </span>
+          </button>
         </div>
         <p style={{ fontSize: 13, color: 'var(--text-tertiary)', marginBottom: 20 }}>
           A new accession number is assigned automatically. The slide begins ingesting from AWS S3.
