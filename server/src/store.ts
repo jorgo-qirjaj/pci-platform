@@ -1,108 +1,132 @@
 import fs from 'fs';
 import path from 'path';
 import { randomUUID } from 'crypto';
+import Database from 'better-sqlite3';
+import { drizzle, type BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
+import { eq } from 'drizzle-orm';
 import { Case } from './types';
 import { SEED_CASES, PRIMARY_LAB_ID } from './seed';
+import { casesTable } from './schema';
 
-// Persisted store location. Overridable via PCI_STORE_FILE so tests (and any
-// alternate deployment) can point at a throwaway path instead of the real data.
-const STORE_FILE = process.env.PCI_STORE_FILE || path.join(__dirname, '..', 'data', 'store.json');
-const DATA_DIR = path.dirname(STORE_FILE);
-
-interface StoreShape {
-  cases: Case[];
-}
+// SQLite database file. ':memory:' (tests) keeps everything in-process. Overridable for deploys.
+const DB_FILE = process.env.PCI_DB_FILE || path.join(__dirname, '..', 'data', 'pci.db');
+// A pre-SQLite JSON store, imported once on first run so existing data isn't lost.
+const LEGACY_JSON = process.env.PCI_STORE_FILE || path.join(__dirname, '..', 'data', 'store.json');
 
 function clone<T>(v: T): T {
   return JSON.parse(JSON.stringify(v));
 }
 
+/** Backfill fields added after older data was written (opaque id, labId, slide magnification). */
+function backfill(c: Case): Case {
+  return {
+    ...c,
+    id: c.id || randomUUID(),
+    labId: c.labId || PRIMARY_LAB_ID,
+    slide: { ...c.slide, magnification: c.slide?.magnification ?? (c.biomarker === 'PDL1' ? 20 : 40) },
+  };
+}
+
 class Store {
-  private cases: Case[] = [];
+  private sqlite: Database.Database;
+  private db: BetterSQLite3Database;
 
   constructor() {
-    this.load();
+    if (DB_FILE !== ':memory:') {
+      const dir = path.dirname(DB_FILE);
+      if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    }
+    this.sqlite = new Database(DB_FILE);
+    if (DB_FILE !== ':memory:') this.sqlite.pragma('journal_mode = WAL'); // safer concurrent writes
+    this.sqlite.exec(
+      `CREATE TABLE IF NOT EXISTS cases (
+        accession TEXT PRIMARY KEY,
+        lab_id    TEXT NOT NULL,
+        status    TEXT NOT NULL,
+        biomarker TEXT NOT NULL,
+        site      TEXT NOT NULL,
+        data      TEXT NOT NULL
+      )`,
+    );
+    this.db = drizzle(this.sqlite);
+    if (this.count() === 0) this.seedOrImport();
   }
 
-  private load() {
+  private count(): number {
+    return (this.sqlite.prepare('SELECT COUNT(*) AS n FROM cases').get() as { n: number }).n;
+  }
+
+  /** Atomic bulk upsert — the whole batch lands in one transaction (no partial/corrupt state). */
+  private upsertAll(cases: Case[]) {
+    const stmt = this.sqlite.prepare(
+      `INSERT INTO cases (accession, lab_id, status, biomarker, site, data) VALUES (?, ?, ?, ?, ?, ?)
+       ON CONFLICT(accession) DO UPDATE SET
+         lab_id=excluded.lab_id, status=excluded.status, biomarker=excluded.biomarker,
+         site=excluded.site, data=excluded.data`,
+    );
+    const tx = this.sqlite.transaction((rows: Case[]) => {
+      for (const c of rows) stmt.run(c.accession, c.labId, c.status, c.biomarker, c.site, JSON.stringify(c));
+    });
+    tx(cases);
+  }
+
+  /** First-run population: import a legacy JSON store (with backfill) if present, else seed. */
+  private seedOrImport() {
     try {
-      if (fs.existsSync(STORE_FILE)) {
-        const raw = JSON.parse(fs.readFileSync(STORE_FILE, 'utf8')) as StoreShape;
-        this.cases = this.migrate(raw.cases ?? clone(SEED_CASES));
-        this.persist(); // write back any backfilled id/labId
-      } else {
-        this.cases = clone(SEED_CASES);
-        this.persist();
+      if (fs.existsSync(LEGACY_JSON)) {
+        const raw = JSON.parse(fs.readFileSync(LEGACY_JSON, 'utf8')) as { cases?: Case[] };
+        if (raw.cases?.length) {
+          this.upsertAll(raw.cases.map(backfill));
+          return;
+        }
       }
     } catch {
-      this.cases = clone(SEED_CASES);
+      /* unreadable legacy store — fall through to seed */
     }
+    this.upsertAll(clone(SEED_CASES));
   }
 
-  /**
-   * Backfill fields added after a store.json was first written. Cases persisted
-   * before tenant scoping (C4) have no labId/id; assign the primary lab and a
-   * fresh opaque id so authorization has something to check.
-   */
-  private migrate(cases: Case[]): Case[] {
-    return cases.map((c) => ({
-      ...c,
-      id: c.id || randomUUID(),
-      labId: c.labId || PRIMARY_LAB_ID,
-      // magnification added with H3; default by biomarker for slides persisted before it.
-      slide: { ...c.slide, magnification: c.slide?.magnification ?? (c.biomarker === 'PDL1' ? 20 : 40) },
-    }));
-  }
-
-  private persist() {
-    try {
-      if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
-      fs.writeFileSync(STORE_FILE, JSON.stringify({ cases: this.cases }, null, 2));
-    } catch (err) {
-      // Persistence is best-effort; the in-memory store remains authoritative.
-      console.warn('[store] could not persist:', (err as Error).message);
-    }
-  }
-
-  /** Reset back to seed data (used by the demo reset endpoint). */
+  /** Reset back to seed data (demo reset endpoint). */
   reset() {
-    this.cases = clone(SEED_CASES);
-    this.persist();
+    this.sqlite.exec('DELETE FROM cases');
+    this.upsertAll(clone(SEED_CASES));
   }
 
-  /** Force a synchronous persist — used on graceful shutdown. */
+  /** Writes are durable per transaction; kept for the graceful-shutdown contract. */
   flush() {
-    this.persist();
+    /* no buffered state */
   }
 
   list(): Case[] {
-    return clone(this.cases);
+    const rows = this.db.select().from(casesTable).all();
+    // Newest accession first (mirrors the previous insert-at-front ordering).
+    return rows.map((r) => JSON.parse(r.data) as Case).sort((a, b) => (a.accession < b.accession ? 1 : -1));
   }
 
   get(accession: string): Case | undefined {
-    const found = this.cases.find((c) => c.accession === accession);
-    return found ? clone(found) : undefined;
-  }
-
-  update(accession: string, patch: Partial<Case>): Case | undefined {
-    const idx = this.cases.findIndex((c) => c.accession === accession);
-    if (idx === -1) return undefined;
-    this.cases[idx] = { ...this.cases[idx], ...patch };
-    this.persist();
-    return clone(this.cases[idx]);
+    const row = this.db.select().from(casesTable).where(eq(casesTable.accession, accession)).get();
+    return row ? (JSON.parse(row.data) as Case) : undefined;
   }
 
   create(c: Case): Case {
-    this.cases.unshift(c);
-    this.persist();
+    this.upsertAll([c]);
     return clone(c);
+  }
+
+  update(accession: string, patch: Partial<Case>): Case | undefined {
+    const current = this.get(accession);
+    if (!current) return undefined;
+    const updated = { ...current, ...patch };
+    this.upsertAll([updated]);
+    return clone(updated);
   }
 
   /** Next accession number in the PCI-YYYY-NNNNN sequence. */
   nextAccession(): string {
     const year = 2026;
-    const nums = this.cases
-      .map((c) => parseInt(c.accession.split('-').pop() || '0', 10))
+    const rows = this.sqlite.prepare('SELECT accession FROM cases').all() as { accession: string }[];
+    const nums = rows
+      .map((r) => parseInt(r.accession.split('-').pop() || '0', 10))
       .filter((n) => !Number.isNaN(n));
     const next = (nums.length ? Math.max(...nums) : 0) + 1;
     return `PCI-${year}-${String(next).padStart(5, '0')}`;

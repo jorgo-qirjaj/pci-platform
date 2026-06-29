@@ -53,9 +53,14 @@ p53AI is a **deterministic mock** (no real CV model), but a produced score is tr
 
 ## Persistence
 
-- In-memory store with best-effort JSON persistence (`server/data/store.json`), overridable via
-  `PCI_STORE_FILE`. A migration backfills fields added over time (`labId`, opaque `id`, slide `magnification`).
-- **Known limitation (H8):** non-atomic full-file writes — a real database is the next data-layer step.
+- **SQLite** via **Drizzle ORM** (`better-sqlite3`, synchronous). Cases are a JSON `data` document
+  plus promoted columns (`accession` PK, `lab_id`, `status`, `biomarker`, `site`) for filtering;
+  writes are transactional, so a crash can't corrupt the store (closes H8). DB path overridable via
+  `PCI_DB_FILE` (tests use `:memory:`).
+- A pre-SQLite `store.json` is imported once on first run, with field backfill (`labId`, opaque `id`,
+  slide `magnification`), so existing data isn't lost.
+- **Still open (M10):** SQLite is single-node; multi-instance horizontal scaling would move to Postgres
+  (a cheap switch via Drizzle).
 
 ## Testing & CI
 

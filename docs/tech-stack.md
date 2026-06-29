@@ -6,7 +6,8 @@
 - **jsonwebtoken** — JWT bearer auth; **bcryptjs** — password hashing.
 - **helmet** — security headers; **express-rate-limit** — login throttling; **cors** — strict origin allowlist.
 - **multer** (2.x) + **form-data** + **axios** — the authenticated slide-upload proxy.
-- Store: in-memory + JSON file (no DB yet — see ticket 302).
+- **zod** — request/JWT-payload validation.
+- **SQLite** via **Drizzle ORM** + **better-sqlite3** — durable, transactional store (ticket 302).
 
 ## Web — `web/`
 - **React 18 + TypeScript**, **Vite** (dev server + build).
