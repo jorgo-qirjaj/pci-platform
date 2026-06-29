@@ -13,3 +13,14 @@ export const casesTable = sqliteTable('cases', {
   site: text('site').notNull(),
   data: text('data').notNull(),
 });
+
+/** Append-only audit trail of clinical actions. Operator + case identity only — no patient PHI. */
+export const auditTable = sqliteTable('audit_log', {
+  id: text('id').primaryKey(),
+  at: text('at').notNull(),
+  actor: text('actor').notNull(),
+  labId: text('lab_id').notNull(),
+  action: text('action').notNull(),
+  accession: text('accession'),
+  detail: text('detail'),
+});

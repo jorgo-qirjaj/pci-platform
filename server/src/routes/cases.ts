@@ -3,10 +3,23 @@ import { randomUUID } from 'crypto';
 import { AuthedRequest, requireAuth } from '../auth';
 import { store } from '../store';
 import { metricFor, runP53AI } from '../ai';
-import { Annotation, Biomarker, Case, CaseStatus, ControlSet } from '../types';
+import { Annotation, AuditEntry, Biomarker, Case, CaseStatus, ControlSet } from '../types';
 import { CreateCaseSchema, ScoreBodySchema, parseBody } from '../validation';
 
 export const casesRouter = Router();
+
+/** Record a clinical action in the append-only audit trail (operator + case only, no PHI). */
+function audit(req: AuthedRequest, action: AuditEntry['action'], accession?: string, detail?: string) {
+  store.appendAudit({
+    id: randomUUID(),
+    at: new Date().toISOString(),
+    actor: req.user?.email ?? 'unknown',
+    labId: req.user?.labId ?? 'unknown',
+    action,
+    accession,
+    detail,
+  });
+}
 
 /**
  * Fetch a case only if it belongs to the caller's lab. Returns null when the case
@@ -91,12 +104,14 @@ casesRouter.post('/', requireAuth, (req: AuthedRequest, res) => {
     ai: null,
   };
   store.create(newCase);
+  audit(req, 'create', accession);
   res.status(201).json({ case: newCase });
 });
 
 casesRouter.get('/:accession', requireAuth, (req: AuthedRequest, res) => {
   const c = findOwned(req, req.params.accession);
   if (!c) return res.status(404).json({ error: 'Case not found' });
+  audit(req, 'view', c.accession);
   res.json({ case: c });
 });
 
@@ -147,6 +162,7 @@ casesRouter.post('/:accession/score', requireAuth, (req: AuthedRequest, res) => 
   });
   const scoreHistory = [...(c.scoreHistory ?? []), ai];
   const updated = store.update(c.accession, { ai, scoreHistory, status: 'ai-scored' });
+  audit(req, 'score', c.accession, `${ai.display} · ${regionId} · ${ai.modelVersion}`);
   res.json({ case: updated });
 });
 
@@ -156,6 +172,7 @@ casesRouter.post('/:accession/finalize', requireAuth, (req: AuthedRequest, res) 
   if (!c) return res.status(404).json({ error: 'Case not found' });
   if (!c.ai) return res.status(409).json({ error: 'Case has no AI score to finalize' });
   const updated = store.update(c.accession, { status: 'complete' as CaseStatus });
+  audit(req, 'finalize', c.accession);
   res.json({ case: updated });
 });
 
@@ -188,6 +205,7 @@ casesRouter.post('/:accession/annotations', requireAuth, (req: AuthedRequest, re
     ...(typeof text === 'string' && text.trim() ? { text: text.trim() } : {}),
   };
   const updated = store.update(c.accession, { annotations: [...c.annotations, annotation] });
+  audit(req, 'annotate', c.accession, annotation.id);
   res.status(201).json({ case: updated });
 });
 
@@ -200,6 +218,7 @@ casesRouter.delete('/:accession/annotations/:annotationId', requireAuth, (req: A
     return res.status(404).json({ error: 'Annotation not found' });
   }
   const updated = store.update(c.accession, { annotations: next });
+  audit(req, 'delete-annotation', c.accession, req.params.annotationId);
   res.json({ case: updated });
 });
 
@@ -225,6 +244,7 @@ casesRouter.get('/:accession/report', requireAuth, (req: AuthedRequest, res) => 
     'interpretation. Scores are computed relative to PCI p53 TriControl™ cell-line references present ' +
     'on the same slide. For research and internal validation use.';
 
+  audit(req, 'report', c.accession);
   res.json({
     report: {
       case: c,

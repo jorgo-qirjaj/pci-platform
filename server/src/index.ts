@@ -5,6 +5,7 @@ import { authRouter } from './routes/auth';
 import { casesRouter } from './routes/cases';
 import { statsRouter } from './routes/stats';
 import { slidesRouter } from './routes/slides';
+import { auditRouter } from './routes/audit';
 import { requireAuth } from './auth';
 import { store } from './store';
 
@@ -24,6 +25,7 @@ app.use('/api/auth', authRouter);
 app.use('/api/cases', casesRouter);
 app.use('/api/stats', statsRouter);
 app.use('/api/slides', slidesRouter);
+app.use('/api/audit', auditRouter);
 
 // Demo convenience: reset the case store back to seed data. Disabled in production —
 // it wipes all data, so it must never be reachable on a real deployment (M2).

@@ -1,13 +1,18 @@
 # 105 — Audit log for clinical actions
 
-**Status:** Open · **Maps to:** H11-a · **Band:** Security · **Effort:** M
+**Status:** Done · **Maps to:** H11-a · **Band:** Security · **Effort:** M
 
-**Context.** No record of who viewed/scored/finalized which case (HIPAA §164.312(b)).
-(Inspired by litepen's "security events" ticket.)
+**What.** Append-only SQLite `audit_log`: who (operator email + lab) did what (view / create /
+score / finalize / report / annotate / delete-annotation) to which case (accession), when, with a
+PHI-free `detail`. `store.appendAudit` (append-only, best-effort) + `store.listAudit` (lab-scoped).
+Lab-scoped `GET /api/audit` (`?accession`, `?limit`). No patient PHI — de-identified accession +
+operator identity only.
 
-**Acceptance.**
-- [ ] Append-only log records actor, action, case, timestamp
-- [ ] Logs contain no PHI and are queryable
-- [ ] Score / finalize / report / case-read are covered
+**Verified.** `audit.test.ts` (5) + a 3-lens adversarial review (PHI-leakage · coverage ·
+append-only/lab-scoping) — all PASS, no actionable findings.
 
-**Files.** `server/src/` (new audit module), `routes/cases.ts`
+**Follow-up (low-sev).** `appendAudit` swallows failures, so a *systemic* logging outage is silent —
+surface via observability (ticket `603`); consider fail-closed audit for production compliance.
+
+**Files.** `server/src/schema.ts`, `store.ts`, `routes/cases.ts`, `routes/audit.ts`, `index.ts`,
+`types.ts`; tests `audit.test.ts`

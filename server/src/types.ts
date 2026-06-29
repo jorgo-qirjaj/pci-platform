@@ -106,3 +106,16 @@ export interface PublicUser {
   initials: string;
   labId: string; // tenant scope, carried in the JWT and enforced on every case access
 }
+
+export type AuditAction = 'view' | 'create' | 'score' | 'finalize' | 'report' | 'annotate' | 'delete-annotation';
+
+/** Append-only audit record. Contains operator identity + case accession only — never patient PHI. */
+export interface AuditEntry {
+  id: string;
+  at: string; // ISO timestamp
+  actor: string; // operator email
+  labId: string; // owning lab/tenant (audit is lab-scoped)
+  action: AuditAction;
+  accession?: string;
+  detail?: string; // short, PHI-free note (e.g. regionId, modelVersion)
+}
