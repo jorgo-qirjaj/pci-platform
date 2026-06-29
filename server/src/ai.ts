@@ -24,12 +24,36 @@ function mulberry32(seed: number) {
 
 const round1 = (n: number) => Math.round(n * 10) / 10;
 
+/** Bump when the scoring logic changes; stamped onto every score for traceability. */
+export const MODEL_VERSION = 'p53AI-1.4.0';
+
+export interface ScoreContext {
+  /** Annotation/ROI the score is anchored to. */
+  regionId: string;
+  /** Capture magnification used. */
+  magnification: number;
+  /** Who initiated the run. */
+  operator: string;
+  /** Timestamp for this run (provenance only — does not affect the score). */
+  scoredAt: string;
+}
+
 /**
- * Mock p53AI inference. Produces a calibrated synthetic score for the slide,
- * anchored (conceptually) to the on-slide OE / WT / NULL TriControl™ cell lines.
+ * Mock p53AI inference. The numeric result is a pure, deterministic function of
+ * (accession, region, model version): re-running the same model on the same region
+ * always reproduces the same score. No Math.random — only `ctx.scoredAt`/operator
+ * vary per run, and those are provenance, not the result.
  */
-export function runP53AI(c: Case, jitter = true): AiScore {
-  const rnd = mulberry32(hashSeed(c.accession) + (jitter ? Math.floor(Math.random() * 1000) : 0));
+export function runP53AI(c: Case, ctx: ScoreContext): AiScore {
+  // Seed is fully determined by the inputs — reproducible by construction.
+  const rnd = mulberry32(hashSeed(`${c.accession}|${ctx.regionId}|${MODEL_VERSION}`));
+  const provenance = {
+    scoredAt: ctx.scoredAt,
+    modelVersion: MODEL_VERSION,
+    regionId: ctx.regionId,
+    magnification: ctx.magnification,
+    operator: ctx.operator,
+  };
   const total = 1980 + Math.floor(rnd() * 220); // ~2000–2200 nuclei
 
   if (c.biomarker === 'MMR') {
@@ -45,7 +69,7 @@ export function runP53AI(c: Case, jitter = true): AiScore {
       positive,
       total,
       confidence: round1(95 + rnd() * 4),
-      scoredAt: new Date().toISOString(),
+      ...provenance,
     };
   }
 
@@ -75,7 +99,7 @@ export function runP53AI(c: Case, jitter = true): AiScore {
     positive,
     total,
     confidence: round1(90 + rnd() * 8),
-    scoredAt: new Date().toISOString(),
+    ...provenance,
   };
 }
 

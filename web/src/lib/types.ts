@@ -23,6 +23,7 @@ export interface SlideMeta {
   file: string;
   vendor: string;
   objective: string;
+  magnification: number;
   dimensions: string;
   sizeBytes: number;
   levels: number;
@@ -53,6 +54,11 @@ export interface AiScore {
   total: number;
   confidence: number;
   scoredAt: string;
+  /** Provenance — present on scores produced after the H5 fix. */
+  modelVersion?: string;
+  regionId?: string;
+  magnification?: number;
+  operator?: string;
 }
 
 export interface Case {

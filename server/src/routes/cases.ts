@@ -3,7 +3,7 @@ import { randomUUID } from 'crypto';
 import { AuthedRequest, requireAuth } from '../auth';
 import { store } from '../store';
 import { metricFor, runP53AI } from '../ai';
-import { Annotation, Biomarker, Case, CaseStatus } from '../types';
+import { Annotation, Biomarker, Case, CaseStatus, ControlSet } from '../types';
 
 export const casesRouter = Router();
 
@@ -18,6 +18,14 @@ function findOwned(req: AuthedRequest, accession: string): Case | null {
   const c = store.get(accession);
   if (!c || c.labId !== req.user?.labId) return null;
   return c;
+}
+
+// Per-biomarker maximum capture magnification (clinical cap), enforced at scoring.
+const MAX_MAGNIFICATION: Record<Biomarker, number> = { p53: 40, PDL1: 20, HER2: 40, MMR: 40 };
+
+// On-slide TriControl™ cell lines each biomarker's QC requires to be present.
+function requiredControls(b: Biomarker): (keyof ControlSet)[] {
+  return b === 'p53' ? ['OE', 'WT', 'NULL'] : ['OE', 'WT'];
 }
 
 function matchesTab(c: Case, tab: string): boolean {
@@ -73,7 +81,8 @@ casesRouter.post('/', requireAuth, (req: AuthedRequest, res) => {
     slide: {
       file: `${biomarker}-${accession.slice(-5)}.svs`,
       vendor: 'Aperio',
-      objective: '40x',
+      objective: `${biomarker === 'PDL1' ? 20 : 40}x`,
+      magnification: biomarker === 'PDL1' ? 20 : 40,
       dimensions: '126,976 × 73,728',
       sizeBytes: 2_298_000_000,
       levels: 13,
@@ -103,10 +112,41 @@ casesRouter.post('/:accession/score', requireAuth, (req: AuthedRequest, res) => 
   if (c.slide.status !== 'ready') {
     return res.status(409).json({ error: 'Slide is still uploading; cannot score yet' });
   }
-  const ai = runP53AI(c);
-  // Scoring also verifies TriControl™ cell lines are present on the slide.
-  const controls = { OE: true, WT: true, NULL: c.biomarker === 'p53' };
-  const updated = store.update(c.accession, { ai, controls, status: 'ai-scored' });
+
+  // H5: a score must be anchored to a region of interest.
+  if (c.annotations.length === 0) {
+    return res.status(409).json({ error: 'Draw a region of interest first; a score must be anchored to a region.' });
+  }
+  const regionId = typeof req.body?.regionId === 'string' ? req.body.regionId : c.annotations[0].id;
+  if (!c.annotations.some((a) => a.id === regionId)) {
+    return res.status(404).json({ error: `Region ${regionId} not found on this case` });
+  }
+
+  // H2: QC hard gate — the required TriControl™ cell lines must actually be present.
+  const missing = requiredControls(c.biomarker).filter((k) => !c.controls[k]);
+  if (missing.length > 0) {
+    return res.status(409).json({
+      error: `QC failed: required TriControl™ cell line(s) not detected (${missing.join(', ')}). Scoring is blocked until controls pass.`,
+    });
+  }
+
+  // H3: magnification hard gate — must not exceed the biomarker's clinical cap.
+  const cap = MAX_MAGNIFICATION[c.biomarker];
+  if (c.slide.magnification > cap) {
+    return res.status(409).json({
+      error: `Capture magnification ${c.slide.magnification}× exceeds the ${cap}× limit for ${c.biomarker}; scoring is blocked.`,
+    });
+  }
+
+  // Deterministic, versioned, region-anchored score; prior runs are retained (not overwritten).
+  const ai = runP53AI(c, {
+    regionId,
+    magnification: c.slide.magnification,
+    operator: req.user?.name ?? 'Unknown',
+    scoredAt: new Date().toISOString(),
+  });
+  const scoreHistory = [...(c.scoreHistory ?? []), ai];
+  const updated = store.update(c.accession, { ai, scoreHistory, status: 'ai-scored' });
   res.json({ case: updated });
 });
 
@@ -173,10 +213,13 @@ casesRouter.get('/:accession/report', requireAuth, (req: AuthedRequest, res) => 
   const ai = c.ai;
   const metric = metricFor(c.biomarker);
   const scorePhrase = ai.value != null ? `${ai.value}% positive nuclei` : ai.display.toLowerCase();
+  const region = ai.regionId ? `region ${ai.regionId}` : 'the annotated region of interest';
+  const magPhrase = ai.magnification ? ` at ${ai.magnification}×` : '';
+  const modelPhrase = ai.modelVersion ? ` (${ai.modelVersion})` : '';
   const interpretation =
     `${c.biomarker} immunohistochemistry demonstrates a ${ai.pattern.toLowerCase()} staining pattern. ` +
-    `The p53AI algorithm, calibrated against on-slide OE, WT, and NULL cell-line controls, scored ` +
-    `${scorePhrase} within the annotated region of interest, consistent with the observed expression pattern.`;
+    `The p53AI algorithm${modelPhrase}, calibrated against on-slide OE, WT, and NULL cell-line controls, scored ` +
+    `${scorePhrase} within ${region}${magPhrase}, consistent with the observed expression pattern.`;
   const disclaimer =
     'p53AI is an investigational decision-support tool and is not a substitute for pathologist ' +
     'interpretation. Scores are computed relative to PCI p53 TriControl™ cell-line references present ' +

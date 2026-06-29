@@ -232,6 +232,26 @@ export function Report() {
             <ControlChips controls={c.controls} />
           </div>
 
+          {/* Provenance — traceability of the score (model, region, magnification, operator) */}
+          {ai.modelVersion && (
+            <div
+              style={{
+                display: 'flex',
+                flexWrap: 'wrap',
+                gap: '4px 14px',
+                fontSize: 11,
+                color: 'var(--text-tertiary)',
+                fontFamily: 'var(--font-mono)',
+                marginBottom: 20,
+              }}
+            >
+              <span>Model {ai.modelVersion}</span>
+              {ai.regionId && <span>· Region {ai.regionId}</span>}
+              {ai.magnification != null && <span>· {ai.magnification}×</span>}
+              {ai.operator && <span>· {ai.operator}</span>}
+            </div>
+          )}
+
           {/* Interpretation */}
           <div
             style={{

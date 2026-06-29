@@ -49,6 +49,8 @@ class Store {
       ...c,
       id: c.id || randomUUID(),
       labId: c.labId || PRIMARY_LAB_ID,
+      // magnification added with H3; default by biomarker for slides persisted before it.
+      slide: { ...c.slide, magnification: c.slide?.magnification ?? (c.biomarker === 'PDL1' ? 20 : 40) },
     }));
   }
 

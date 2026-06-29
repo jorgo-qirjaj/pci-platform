@@ -29,11 +29,13 @@ export const USERS: User[] = [
 ];
 
 // Standard whole-slide metadata shared by the demo Aperio scans.
-function slide(file: string, status: 'uploading' | 'ready' = 'ready') {
+// PDL1 scans are captured at ≤20× (its clinical cap); other biomarkers at 40×.
+function slide(file: string, status: 'uploading' | 'ready' = 'ready', magnification = 40) {
   return {
     file,
     vendor: 'Aperio',
-    objective: '40x',
+    objective: `${magnification}x`,
+    magnification,
     dimensions: '126,976 × 73,728',
     sizeBytes: 2_298_000_000, // ~2.14 GB
     levels: 13,
@@ -86,7 +88,7 @@ const SEED_CASE_DATA: Omit<Case, 'id' | 'labId'>[] = [
     received: '2026-06-16',
     status: 'review',
     pathologist: 'John Andersen, DO',
-    slide: slide(fileName('PDL1', 'PCI-2026-00141')),
+    slide: slide(fileName('PDL1', 'PCI-2026-00141'), 'ready', 20),
     controls: { OE: true, WT: true, NULL: false },
     annotations: [{ id: 'ROI-1', microns: 280 }],
     ai: null,
@@ -194,7 +196,7 @@ const SEED_CASE_DATA: Omit<Case, 'id' | 'labId'>[] = [
     received: '2026-06-11',
     status: 'active',
     pathologist: 'John Andersen, DO',
-    slide: slide(fileName('PDL1', 'PCI-2026-00136')),
+    slide: slide(fileName('PDL1', 'PCI-2026-00136'), 'ready', 20),
     controls: { OE: true, WT: true, NULL: false },
     annotations: [],
     ai: null,

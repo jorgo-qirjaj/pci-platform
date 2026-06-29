@@ -117,7 +117,10 @@ export function CaseDetail() {
     navigate(`/cases/${c.accession}/report`);
   };
 
-  if (error) {
+  // Only take over the whole screen when the case itself failed to load; a
+  // score-time gate error (QC / magnification / region) shows inline by the
+  // score panel instead of replacing the page.
+  if (error && !c) {
     return <div style={{ padding: 40, color: 'var(--red-600)' }}>{error}</div>;
   }
   if (!c) {

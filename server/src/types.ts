@@ -24,6 +24,8 @@ export interface SlideMeta {
   file: string;
   vendor: string;
   objective: string;
+  /** Capture magnification (numeric, e.g. 40, 20). Enforced per biomarker at scoring. */
+  magnification: number;
   dimensions: string;
   sizeBytes: number;
   levels: number;
@@ -56,6 +58,14 @@ export interface AiScore {
   total: number;
   confidence: number;
   scoredAt: string;
+  /** Provenance — present on every score produced after the H5 fix. */
+  modelVersion?: string;
+  /** Annotation/ROI id the score was computed on. */
+  regionId?: string;
+  /** Capture magnification the score was computed at. */
+  magnification?: number;
+  /** Who ran the score. */
+  operator?: string;
 }
 
 export interface Case {
@@ -76,6 +86,8 @@ export interface Case {
   controls: ControlSet;
   annotations: Annotation[];
   ai: AiScore | null;
+  /** All scoring runs in order (latest is also mirrored in `ai`); never overwritten. */
+  scoreHistory?: AiScore[];
 }
 
 export interface User {
