@@ -59,6 +59,10 @@ export interface AiScore {
 }
 
 export interface Case {
+  /** Opaque, non-guessable resource id — defense-in-depth against the sequential accession. */
+  id: string;
+  /** Owning lab/tenant. Every case access is scoped to the caller's labId. */
+  labId: string;
   accession: string;
   biomarker: Biomarker;
   site: string;
@@ -80,6 +84,7 @@ export interface User {
   name: string;
   role: string;
   initials: string;
+  labId: string; // tenant the user belongs to
 }
 
 export interface PublicUser {
@@ -87,4 +92,5 @@ export interface PublicUser {
   name: string;
   role: string;
   initials: string;
+  labId: string; // tenant scope, carried in the JWT and enforced on every case access
 }

@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { randomUUID } from 'crypto';
 import { AuthedRequest, requireAuth } from '../auth';
 import { store } from '../store';
 import { metricFor, runP53AI } from '../ai';
@@ -7,6 +8,17 @@ import { Annotation, Biomarker, Case, CaseStatus } from '../types';
 export const casesRouter = Router();
 
 const BIOMARKERS: Biomarker[] = ['p53', 'PDL1', 'HER2', 'MMR'];
+
+/**
+ * Fetch a case only if it belongs to the caller's lab. Returns null when the case
+ * is absent OR owned by another tenant — handlers return 404 in both cases, so a
+ * caller cannot tell "exists but not yours" from "doesn't exist" (no IDOR oracle).
+ */
+function findOwned(req: AuthedRequest, accession: string): Case | null {
+  const c = store.get(accession);
+  if (!c || c.labId !== req.user?.labId) return null;
+  return c;
+}
 
 function matchesTab(c: Case, tab: string): boolean {
   switch (tab) {
@@ -21,10 +33,11 @@ function matchesTab(c: Case, tab: string): boolean {
   }
 }
 
-casesRouter.get('/', requireAuth, (req, res) => {
+casesRouter.get('/', requireAuth, (req: AuthedRequest, res) => {
   const tab = String(req.query.status ?? 'all');
   const q = String(req.query.q ?? '').trim().toLowerCase();
-  let cases = store.list().filter((c) => matchesTab(c, tab));
+  // Scope every listing to the caller's lab before any other filtering.
+  let cases = store.list().filter((c) => c.labId === req.user?.labId && matchesTab(c, tab));
   if (q) {
     cases = cases.filter(
       (c) =>
@@ -46,6 +59,8 @@ casesRouter.post('/', requireAuth, (req: AuthedRequest, res) => {
   const submitted = today.toISOString().slice(0, 10);
   const received = submitted;
   const newCase: Case = {
+    id: randomUUID(),
+    labId: req.user!.labId,
     accession,
     biomarker,
     site: site || 'Unassigned site',
@@ -72,15 +87,15 @@ casesRouter.post('/', requireAuth, (req: AuthedRequest, res) => {
   res.status(201).json({ case: newCase });
 });
 
-casesRouter.get('/:accession', requireAuth, (req, res) => {
-  const c = store.get(req.params.accession);
+casesRouter.get('/:accession', requireAuth, (req: AuthedRequest, res) => {
+  const c = findOwned(req, req.params.accession);
   if (!c) return res.status(404).json({ error: 'Case not found' });
   res.json({ case: c });
 });
 
 // Run (or re-run) p53AI on a case.
-casesRouter.post('/:accession/score', requireAuth, (req, res) => {
-  const c = store.get(req.params.accession);
+casesRouter.post('/:accession/score', requireAuth, (req: AuthedRequest, res) => {
+  const c = findOwned(req, req.params.accession);
   if (!c) return res.status(404).json({ error: 'Case not found' });
   if (c.status === 'complete') {
     return res.status(409).json({ error: 'Case is finalized and locked; its report is immutable' });
@@ -96,8 +111,8 @@ casesRouter.post('/:accession/score', requireAuth, (req, res) => {
 });
 
 // Finalize: lock the report.
-casesRouter.post('/:accession/finalize', requireAuth, (req, res) => {
-  const c = store.get(req.params.accession);
+casesRouter.post('/:accession/finalize', requireAuth, (req: AuthedRequest, res) => {
+  const c = findOwned(req, req.params.accession);
   if (!c) return res.status(404).json({ error: 'Case not found' });
   if (!c.ai) return res.status(409).json({ error: 'Case has no AI score to finalize' });
   const updated = store.update(c.accession, { status: 'complete' as CaseStatus });
@@ -105,8 +120,8 @@ casesRouter.post('/:accession/finalize', requireAuth, (req, res) => {
 });
 
 // Append an annotation (region of interest) to a case.
-casesRouter.post('/:accession/annotations', requireAuth, (req, res) => {
-  const c = store.get(req.params.accession);
+casesRouter.post('/:accession/annotations', requireAuth, (req: AuthedRequest, res) => {
+  const c = findOwned(req, req.params.accession);
   if (!c) return res.status(404).json({ error: 'Case not found' });
   const { microns, rect, type, points, text } = req.body ?? {};
   const micronsNum = Number(microns);
@@ -137,8 +152,8 @@ casesRouter.post('/:accession/annotations', requireAuth, (req, res) => {
 });
 
 // Delete an annotation from a case.
-casesRouter.delete('/:accession/annotations/:annotationId', requireAuth, (req, res) => {
-  const c = store.get(req.params.accession);
+casesRouter.delete('/:accession/annotations/:annotationId', requireAuth, (req: AuthedRequest, res) => {
+  const c = findOwned(req, req.params.accession);
   if (!c) return res.status(404).json({ error: 'Case not found' });
   const next = c.annotations.filter((a) => a.id !== req.params.annotationId);
   if (next.length === c.annotations.length) {
@@ -149,8 +164,8 @@ casesRouter.delete('/:accession/annotations/:annotationId', requireAuth, (req, r
 });
 
 // Structured report payload, including generated interpretation prose.
-casesRouter.get('/:accession/report', requireAuth, (req, res) => {
-  const c = store.get(req.params.accession);
+casesRouter.get('/:accession/report', requireAuth, (req: AuthedRequest, res) => {
+  const c = findOwned(req, req.params.accession);
   if (!c) return res.status(404).json({ error: 'Case not found' });
   if (!c.ai) {
     return res.status(409).json({ error: 'Case has no AI score yet; run p53AI before generating a report' });

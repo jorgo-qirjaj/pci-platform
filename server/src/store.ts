@@ -1,7 +1,8 @@
 import fs from 'fs';
 import path from 'path';
+import { randomUUID } from 'crypto';
 import { Case } from './types';
-import { SEED_CASES } from './seed';
+import { SEED_CASES, PRIMARY_LAB_ID } from './seed';
 
 const DATA_DIR = path.join(__dirname, '..', 'data');
 const STORE_FILE = path.join(DATA_DIR, 'store.json');
@@ -25,7 +26,8 @@ class Store {
     try {
       if (fs.existsSync(STORE_FILE)) {
         const raw = JSON.parse(fs.readFileSync(STORE_FILE, 'utf8')) as StoreShape;
-        this.cases = raw.cases ?? clone(SEED_CASES);
+        this.cases = this.migrate(raw.cases ?? clone(SEED_CASES));
+        this.persist(); // write back any backfilled id/labId
       } else {
         this.cases = clone(SEED_CASES);
         this.persist();
@@ -33,6 +35,19 @@ class Store {
     } catch {
       this.cases = clone(SEED_CASES);
     }
+  }
+
+  /**
+   * Backfill fields added after a store.json was first written. Cases persisted
+   * before tenant scoping (C4) have no labId/id; assign the primary lab and a
+   * fresh opaque id so authorization has something to check.
+   */
+  private migrate(cases: Case[]): Case[] {
+    return cases.map((c) => ({
+      ...c,
+      id: c.id || randomUUID(),
+      labId: c.labId || PRIMARY_LAB_ID,
+    }));
   }
 
   private persist() {

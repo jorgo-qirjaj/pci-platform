@@ -1,13 +1,30 @@
+import { randomUUID } from 'crypto';
 import { Case, User } from './types';
+
+// Tenants. Access to every case is scoped to the caller's labId.
+export const PRIMARY_LAB_ID = 'LAB-PCI-HOUSTON';
+export const SECONDARY_LAB_ID = 'LAB-NORTHSHORE'; // a separate lab, used to prove tenant isolation
+
+// bcrypt hash of the demo password "123456789" (shared by both demo users).
+const DEMO_PASSWORD_HASH = '$2b$10$p/CUH1z.emFvzNEz2Y9EDu7deqtrGnnT2HunQh8xEQ9k0LSZoJ5S6';
 
 export const USERS: User[] = [
   {
     email: 'jandersen@pcibio.com',
-    // bcrypt hash of the demo password "123456789"
-    passwordHash: '$2b$10$p/CUH1z.emFvzNEz2Y9EDu7deqtrGnnT2HunQh8xEQ9k0LSZoJ5S6',
+    passwordHash: DEMO_PASSWORD_HASH,
     name: 'John Andersen',
     role: 'Pathologist',
     initials: 'JA',
+    labId: PRIMARY_LAB_ID,
+  },
+  {
+    // A pathologist at a different lab. Sees only their own lab's cases.
+    email: 'rkhan@northshore.example',
+    passwordHash: DEMO_PASSWORD_HASH,
+    name: 'Riya Khan',
+    role: 'Pathologist',
+    initials: 'RK',
+    labId: SECONDARY_LAB_ID,
   },
 ];
 
@@ -29,7 +46,8 @@ function fileName(biomarker: string, accession: string) {
 }
 
 // Mirrors the design-system mock cases, expanded into the full domain model.
-export const SEED_CASES: Case[] = [
+// id + labId are stamped on below so we don't repeat them on every entry.
+const SEED_CASE_DATA: Omit<Case, 'id' | 'labId'>[] = [
   {
     accession: 'PCI-2026-00142',
     biomarker: 'p53',
@@ -182,3 +200,10 @@ export const SEED_CASES: Case[] = [
     ai: null,
   },
 ];
+
+// All seed cases belong to the primary lab; each gets an opaque id.
+export const SEED_CASES: Case[] = SEED_CASE_DATA.map((c) => ({
+  id: randomUUID(),
+  labId: PRIMARY_LAB_ID,
+  ...c,
+}));

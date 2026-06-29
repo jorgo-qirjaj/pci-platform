@@ -20,7 +20,7 @@ const TOKEN_TTL = '12h';
 const TIMING_EQUALIZER_HASH = '$2b$10$p/CUH1z.emFvzNEz2Y9EDu7deqtrGnnT2HunQh8xEQ9k0LSZoJ5S6';
 
 export function toPublic(u: User): PublicUser {
-  return { email: u.email, name: u.name, role: u.role, initials: u.initials };
+  return { email: u.email, name: u.name, role: u.role, initials: u.initials, labId: u.labId };
 }
 
 export function authenticate(email: string, password: string): User | null {
@@ -47,7 +47,13 @@ export function requireAuth(req: AuthedRequest, res: Response, next: NextFunctio
   }
   try {
     const payload = jwt.verify(token, JWT_SECRET) as PublicUser & { iat: number; exp: number };
-    req.user = { email: payload.email, name: payload.name, role: payload.role, initials: payload.initials };
+    req.user = {
+      email: payload.email,
+      name: payload.name,
+      role: payload.role,
+      initials: payload.initials,
+      labId: payload.labId,
+    };
     next();
   } catch {
     return res.status(401).json({ error: 'Invalid or expired token' });
