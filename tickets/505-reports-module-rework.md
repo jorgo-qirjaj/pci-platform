@@ -1,6 +1,6 @@
 # 505 — Reports module: make interactive + rethink
 
-**Status:** Open · **Band:** Frontend · **Effort:** M
+**Status:** Interactivity shipped · rethink open · **Band:** Frontend · **Effort:** M
 
 **Context.** `web/src/pages/Reports.tsx` is a thin list of AI-scored cases — each row shows
 accession / site / score and a single small **"Open report"** button. Two problems:
@@ -9,12 +9,12 @@ accession / site / score and a single small **"Open report"** button. Two proble
 2. **Needs a rethink.** The module is thin — just a filtered case list. What should "Reports" actually
    *be*? (Needs product direction.)
 
-**Acceptance — interactivity (near-term, concrete):**
-- [ ] The whole report card is clickable (opens the report), with a **hover highlight** and an
+**Acceptance — interactivity (near-term, concrete):** ✅ shipped
+- [x] The whole report card is clickable (opens the report), with a **hover highlight** and an
       **active/pressed** effect.
-- [ ] Keyboard-operable + visible focus (`tabIndex`, Enter/Space) with an `aria-label`, consistent with
-      the dashboard rows from ticket 503.
-- [ ] Keep an explicit "Open report" affordance for clarity.
+- [x] Keyboard-operable + visible focus (`tabIndex`, Enter/Space) with an `aria-label`, consistent with
+      the dashboard rows from ticket 503 (focus ring via the global `:focus-visible` rule).
+- [x] Keep an explicit "Open report" affordance for clarity.
 
 **Acceptance — rethink (needs a design + product pass; dissect before building):**
 - [ ] Decide what Reports offers beyond a list — e.g. search/filter (biomarker, date, status), PDF

@@ -32,12 +32,30 @@ export function Reports() {
         {cases.map((c, i) => (
           <div
             key={c.accession}
+            onClick={() => navigate(`/cases/${c.accession}/report`)}
+            tabIndex={0}
+            aria-label={`Open report for ${c.accession}, ${c.biomarker}`}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                navigate(`/cases/${c.accession}/report`);
+              }
+            }}
+            onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--surface-hover)')}
+            onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+            onFocus={(e) => (e.currentTarget.style.background = 'var(--surface-hover)')}
+            onBlur={(e) => (e.currentTarget.style.background = 'transparent')}
+            onMouseDown={(e) => (e.currentTarget.style.background = 'var(--blue-50)')}
+            onMouseUp={(e) => (e.currentTarget.style.background = 'var(--surface-hover)')}
             style={{
               display: 'flex',
               alignItems: 'center',
               gap: 16,
               padding: '14px 18px',
               borderTop: i === 0 ? 'none' : '1px solid var(--border-subtle)',
+              cursor: 'pointer',
+              background: 'transparent',
+              transition: 'background var(--dur-fast)',
             }}
           >
             <span
