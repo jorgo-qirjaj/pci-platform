@@ -1,0 +1,16 @@
+[Unit]
+Description=PCI tile server (FastAPI / OpenSlide)
+After=network.target
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/home/ubuntu/pci-viewer/backend
+EnvironmentFile=/home/ubuntu/pci-viewer/backend/.env
+# Bind to localhost only — the Express app proxies to it; it is never exposed publicly.
+ExecStart=/home/ubuntu/pci-viewer/venv/bin/python -m uvicorn main:app --host 127.0.0.1 --port 8000
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target

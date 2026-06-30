@@ -6,10 +6,11 @@
 > (Render/Railway). The payoff is one roof and reusing your existing AWS account. This plan keeps it
 > as simple as AWS allows.
 
-> **Decided + prepped (2026-06-29):** Lightsail VM · phased · **CloudFront for free HTTPS**. Because
-> CloudFront terminates TLS and Express now serves the web + proxies `/slides`+`/tiles` itself, there's
-> **no reverse proxy (Caddy) on the box** — the diagram below predates that. **The step-by-step runbook
-> + scripts live in [`deploy/`](../deploy/README.md).**
+> **Decided + prepped (2026-06-29):** **everything on one Lightsail VM, from scratch** — no Railway,
+> **no S3**. Both services run on the box (Node app + Python tile server), **slides live on the box's
+> local disk**, and **CloudFront** provides free HTTPS. No reverse proxy on the box (Express serves the
+> web + proxies `/slides`+`/tiles`); no AWS keys (slides are local). The sections below are the original
+> S3-based sketch — **the authoritative step-by-step is [`deploy/README.md`](../deploy/README.md).**
 
 ## Why a VM (not serverless)
 
