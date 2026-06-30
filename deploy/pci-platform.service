@@ -1,0 +1,15 @@
+[Unit]
+Description=PCI Pathology Platform (API + web)
+After=network.target
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/home/ubuntu/pci-platform/server
+EnvironmentFile=/home/ubuntu/pci-platform/server/.env
+ExecStart=/usr/bin/node /home/ubuntu/pci-platform/server/dist/index.js
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target

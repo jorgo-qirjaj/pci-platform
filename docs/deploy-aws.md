@@ -6,6 +6,11 @@
 > (Render/Railway). The payoff is one roof and reusing your existing AWS account. This plan keeps it
 > as simple as AWS allows.
 
+> **Decided + prepped (2026-06-29):** Lightsail VM · phased · **CloudFront for free HTTPS**. Because
+> CloudFront terminates TLS and Express now serves the web + proxies `/slides`+`/tiles` itself, there's
+> **no reverse proxy (Caddy) on the box** — the diagram below predates that. **The step-by-step runbook
+> + scripts live in [`deploy/`](../deploy/README.md).**
+
 ## Why a VM (not serverless)
 
 Our app has two **stateful** pieces that need a real server with a disk:

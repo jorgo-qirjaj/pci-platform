@@ -1,14 +1,19 @@
-# 604 — Deployment
+# 604 — Deploy a hosted demo (AWS)
 
-**Status:** Open · **Band:** Quality/Ops · **Effort:** M
+**Status:** Repo prep done · deploy pending (user) · **Band:** Quality/Ops · **Effort:** M
 
-**Context.** The tile server runs on Railway; the API + web aren't hosted. The new tile-server code
-(415 errors, upload validation, H12 auth) needs a Railway redeploy, and `UPLOAD_API_KEY` must be set
-on both the API and the tile server for uploads to work.
+**Decision.** Centralize on AWS: a single **Lightsail** VM runs the API + web (one origin), with the
+tile server staying on **Railway** for Phase 1; **CloudFront** provides free HTTPS. (See `docs/deploy-aws.md`.)
 
-**Acceptance.**
-- [ ] API + web deployed; `JWT_SECRET`, `CORS_ORIGIN` set in prod
-- [ ] `UPLOAD_API_KEY` set identically on API + tile server; tile server redeployed
-- [ ] Smoke test the full upload → view → score → report path in prod
+**Prepped (in repo):**
+- `SERVE_WEB=1` makes Express serve the production web build + proxy `/slides`+`/tiles` — single service,
+  one URL. Verified locally (SPA served, same-origin API, tiles proxied, client-route fallback).
+- `deploy/aws-setup.sh`, `deploy/pci-platform.service`, `server/.env.example`, and the step-by-step
+  `deploy/README.md` (Lightsail + CloudFront cache behaviors + Railway tile-server key).
 
-**Files.** deploy config (Railway/host)
+**Remaining (needs the user's AWS account):** create the Lightsail instance, run the setup script, set
+secrets, create the CloudFront distribution, and set `UPLOAD_API_KEY` on the Railway tile server.
+
+**Phase 2 (later):** move the tile server onto the box (OpenSlide + S3 IAM) for full centralization.
+
+**Files.** `server/src/index.ts`, `deploy/*`, `server/.env.example`, `docs/deploy-aws.md`

@@ -11,3 +11,6 @@ server/data/*.db
 server/data/*.db-wal
 server/data/*.db-shm
 web/dist/
+
+# build output
+server/dist
