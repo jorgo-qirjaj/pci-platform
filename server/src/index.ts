@@ -1,6 +1,8 @@
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
+import path from 'path';
+import axios from 'axios';
 import { authRouter } from './routes/auth';
 import { casesRouter } from './routes/cases';
 import { statsRouter } from './routes/stats';
@@ -39,6 +41,29 @@ app.post('/api/admin/reset', requireAuth, (_req, res) => {
 
 // 404 for unknown API routes.
 app.use('/api', (_req, res) => res.status(404).json({ error: 'Not found' }));
+
+// In production the API also serves the built web app and proxies slide/tile reads to the
+// tile server (in dev, Vite's proxy does both). Enable with SERVE_WEB=1.
+if (process.env.SERVE_WEB === '1') {
+  const TILE = (process.env.TILE_API_TARGET || 'https://pci-viewer-production.up.railway.app').replace(/\/$/, '');
+  // Stream read-only slide/tile requests through to the tile server.
+  app.use(['/slides', '/tiles'], async (req, res) => {
+    try {
+      const upstream = await axios.get(`${TILE}${req.originalUrl}`, { responseType: 'stream', validateStatus: () => true });
+      res.status(upstream.status);
+      if (upstream.headers['content-type']) res.type(String(upstream.headers['content-type']));
+      if (upstream.headers['cache-control']) res.set('cache-control', String(upstream.headers['cache-control']));
+      upstream.data.pipe(res);
+    } catch {
+      res.status(502).json({ error: 'Tile server unreachable' });
+    }
+  });
+
+  // Serve the static web build, falling back to index.html for client-side routes.
+  const webDist = path.join(__dirname, '..', '..', 'web', 'dist');
+  app.use(express.static(webDist));
+  app.get('*', (_req, res) => res.sendFile(path.join(webDist, 'index.html')));
+}
 
 // Start the HTTP listener only when run as the server. Under test the app is
 // imported into Supertest, which drives it without binding a port.
