@@ -17,7 +17,22 @@ const PORT = Number(process.env.PORT) || 4000;
 // Restrict cross-origin access to known frontends (comma-separated CORS_ORIGIN, defaults to the dev web origin).
 const allowedOrigins = (process.env.CORS_ORIGIN || 'http://localhost:5173').split(',').map((o) => o.trim());
 
-app.use(helmet());
+// Security headers. The CSP is tuned for this app: it uses inline styles (design-system
+// components) and loads the OpenSeadragon control icons from a CDN, and we drop
+// upgrade-insecure-requests so the app also works when reached directly over HTTP (behind
+// CloudFront everything is already HTTPS, so it's a no-op there).
+app.use(
+  helmet({
+    contentSecurityPolicy: {
+      directives: {
+        styleSrc: ["'self'", "'unsafe-inline'"],
+        imgSrc: ["'self'", 'data:', 'blob:', 'https://cdnjs.cloudflare.com'],
+        connectSrc: ["'self'"],
+        upgradeInsecureRequests: null,
+      },
+    },
+  }),
+);
 app.use(cors({ origin: allowedOrigins }));
 app.use(express.json({ limit: '1mb' }));
 
