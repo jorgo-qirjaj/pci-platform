@@ -82,3 +82,11 @@ button {
     box-shadow: none !important;
   }
 }
+
+/* Report worklist rows: drop the confidence meter when the content area is tight
+   so the row degrades cleanly instead of colliding (ticket 505). */
+@media (max-width: 1040px) {
+  .rpt-conf {
+    display: none;
+  }
+}
